@@ -1,0 +1,11 @@
+inspecode:
+  tools:
+    prettier:
+      ignore:
+        - "**/*.js" # NOTE: Do not not use prettier for JavaScript.
+        - "**/*.md"
+        - "**/*.html"
+        - "client/assets/lib/**"
+      auto-fix: true
+      thresholds: {num-issues: 0}
+
