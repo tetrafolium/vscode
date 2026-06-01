@@ -3,14 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createConnection, Connection } from 'vscode-languageserver/node';
-import { formatError } from '../utils/runner';
-import { startServer } from '../jsonServer';
-import { RequestService } from '../requests';
+import { createConnection, Connection, Disposable } from 'vscode-languageserver/node';
+import { formatError } from '../utils/runner.js';
+import { RequestService, RuntimeEnvironment, startServer } from '../jsonServer.js';
 
-import { xhr, XHRResponse, configure as configureHttpRequests, getErrorStatusDescription } from 'request-light';
+import requestLight, { XHRResponse } from 'request-light';
 import { URI as Uri } from 'vscode-uri';
-import * as fs from 'fs';
+import { promises as fs } from 'fs';
+import * as l10n from '@vscode/l10n';
+
+const { xhr, configure: configureHttpRequests, getErrorStatusDescription } = requestLight;
 
 // Create a connection for the server.
 const connection: Connection = createConnection();
@@ -37,19 +39,38 @@ function getHTTPRequestService(): RequestService {
 
 function getFileRequestService(): RequestService {
 	return {
-		getContent(location: string, encoding?: string) {
-			return new Promise((c, e) => {
+		async getContent(location: string, encoding?: BufferEncoding) {
+			try {
 				const uri = Uri.parse(location);
-				fs.readFile(uri.fsPath, encoding, (err, buf) => {
-					if (err) {
-						return e(err);
-					}
-					c(buf.toString());
-				});
-			});
+				return (await fs.readFile(uri.fsPath, encoding)).toString();
+			} catch (e) {
+				if (e.code === 'ENOENT') {
+					throw new Error(l10n.t('Schema not found: {0}', location));
+				} else if (e.code === 'EISDIR') {
+					throw new Error(l10n.t('{0} is a directory, not a file', location));
+				}
+				throw e;
+			}
 		}
 	};
 }
 
+const runtime: RuntimeEnvironment = {
+	timer: {
+		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable {
+			const handle = setImmediate(callback, ...args);
+			return { dispose: () => clearImmediate(handle) };
+		},
+		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable {
+			const handle = setTimeout(callback, ms, ...args);
+			return { dispose: () => clearTimeout(handle) };
+		}
+	},
+	file: getFileRequestService(),
+	http: getHTTPRequestService(),
+	configureHttpRequests
+};
 
-startServer(connection, { file: getFileRequestService(), http: getHTTPRequestService(), configureHttpRequests });
+
+
+startServer(connection, runtime);

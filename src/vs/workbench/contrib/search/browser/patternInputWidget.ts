@@ -3,41 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as nls from 'vs/nls';
-import * as dom from 'vs/base/browser/dom';
-import { Widget } from 'vs/base/browser/ui/widget';
-import { Checkbox } from 'vs/base/browser/ui/checkbox/checkbox';
-import { IContextViewProvider } from 'vs/base/browser/ui/contextview/contextview';
-import { IInputValidator, HistoryInputBox, IInputBoxStyles } from 'vs/base/browser/ui/inputbox/inputBox';
-import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
-import { KeyCode } from 'vs/base/common/keyCodes';
-import { Event as CommonEvent, Emitter } from 'vs/base/common/event';
-import { IThemeService } from 'vs/platform/theme/common/themeService';
-import { attachInputBoxStyler, attachCheckboxStyler } from 'vs/platform/theme/common/styler';
-import { ContextScopedHistoryInputBox } from 'vs/platform/browser/contextScopedHistoryWidget';
-import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
-import type { IThemable } from 'vs/base/common/styler';
-import { Codicon } from 'vs/base/common/codicons';
+import * as dom from '../../../../base/browser/dom.js';
+import { IKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
+import { Toggle } from '../../../../base/browser/ui/toggle/toggle.js';
+import { IContextViewProvider } from '../../../../base/browser/ui/contextview/contextview.js';
+import { HistoryInputBox, IInputBoxStyles } from '../../../../base/browser/ui/inputbox/inputBox.js';
+import { Widget } from '../../../../base/browser/ui/widget.js';
+import { Codicon } from '../../../../base/common/codicons.js';
+import { Emitter, Event as CommonEvent } from '../../../../base/common/event.js';
+import { KeyCode } from '../../../../base/common/keyCodes.js';
+import * as nls from '../../../../nls.js';
+import { ContextScopedHistoryInputBox } from '../../../../platform/history/browser/contextScopedHistoryWidget.js';
+import { showHistoryKeybindingHint } from '../../../../platform/history/browser/historyWidgetKeybindingHint.js';
+import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
+import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
+import { defaultToggleStyles } from '../../../../platform/theme/browser/defaultStyles.js';
 
 export interface IOptions {
 	placeholder?: string;
+	showPlaceholderOnFocus?: boolean;
+	tooltip?: string;
 	width?: number;
-	validation?: IInputValidator;
 	ariaLabel?: string;
 	history?: string[];
-	submitOnType?: boolean;
-	submitOnTypeDelay?: number;
+	inputBoxStyles: IInputBoxStyles;
 }
 
-export class PatternInputWidget extends Widget implements IThemable {
+export class PatternInputWidget extends Widget {
 
 	static OPTION_CHANGE: string = 'optionChange';
 
 	inputFocusTracker!: dom.IFocusTracker;
 
 	private width: number;
-	private placeholder: string;
-	private ariaLabel: string;
 
 	private domNode!: HTMLElement;
 	protected inputBox!: HistoryInputBox;
@@ -48,30 +47,32 @@ export class PatternInputWidget extends Widget implements IThemable {
 	private _onCancel = this._register(new Emitter<void>());
 	onCancel: CommonEvent<void> = this._onCancel.event;
 
-	constructor(parent: HTMLElement, private contextViewProvider: IContextViewProvider, options: IOptions = Object.create(null),
-		@IThemeService protected themeService: IThemeService,
-		@IContextKeyService private readonly contextKeyService: IContextKeyService
+	constructor(parent: HTMLElement, private contextViewProvider: IContextViewProvider, options: IOptions,
+		@IContextKeyService private readonly contextKeyService: IContextKeyService,
+		@IConfigurationService protected readonly configurationService: IConfigurationService,
+		@IKeybindingService private readonly keybindingService: IKeybindingService,
 	) {
 		super();
-		this.width = options.width || 100;
-		this.placeholder = options.placeholder || '';
-		this.ariaLabel = options.ariaLabel || nls.localize('defaultLabel', "input");
+		options = {
+			...{
+				ariaLabel: nls.localize('defaultLabel', "input")
+			},
+			...options,
+		};
+		this.width = options.width ?? 100;
 
 		this.render(options);
 
 		parent.appendChild(this.domNode);
 	}
 
-	dispose(): void {
+	override dispose(): void {
 		super.dispose();
-		if (this.inputFocusTracker) {
-			this.inputFocusTracker.dispose();
-		}
+		this.inputFocusTracker?.dispose();
 	}
 
 	setWidth(newWidth: number): void {
 		this.width = newWidth;
-		this.domNode.style.width = this.width + 'px';
 		this.contextViewProvider.layout();
 		this.setInputWidth();
 	}
@@ -115,6 +116,10 @@ export class PatternInputWidget extends Widget implements IThemable {
 		this.inputBox.clearHistory();
 	}
 
+	prependHistory(history: string[]): void {
+		this.inputBox.prependHistory(history);
+	}
+
 	clear(): void {
 		this.setValue('');
 	}
@@ -131,24 +136,23 @@ export class PatternInputWidget extends Widget implements IThemable {
 		this.inputBox.showPreviousValue();
 	}
 
-	style(styles: IInputBoxStyles): void {
-		this.inputBox.style(styles);
-	}
-
 	private render(options: IOptions): void {
 		this.domNode = document.createElement('div');
-		this.domNode.style.width = this.width + 'px';
 		this.domNode.classList.add('monaco-findInput');
+		const history = options.history || [];
 
-		this.inputBox = new ContextScopedHistoryInputBox(this.domNode, this.contextViewProvider, {
-			placeholder: this.placeholder || '',
-			ariaLabel: this.ariaLabel || '',
+		this.inputBox = this._register(new ContextScopedHistoryInputBox(this.domNode, this.contextViewProvider, {
+			placeholder: options.placeholder,
+			showPlaceholderOnFocus: options.showPlaceholderOnFocus,
+			tooltip: options.tooltip,
+			ariaLabel: options.ariaLabel,
 			validationOptions: {
 				validation: undefined
 			},
-			history: options.history || []
-		}, this.contextKeyService);
-		this._register(attachInputBoxStyler(this.inputBox, this.themeService));
+			history: new Set(history),
+			showHistoryHint: () => showHistoryKeybindingHint(this.keybindingService),
+			inputBoxStyles: options.inputBoxStyles
+		}, this.contextKeyService));
 		this._register(this.inputBox.onDidChange(() => this._onSubmit.fire(true)));
 
 		this.inputFocusTracker = dom.trackFocus(this.inputBox.inputElement);
@@ -178,21 +182,118 @@ export class PatternInputWidget extends Widget implements IThemable {
 	}
 }
 
+export class IncludePatternInputWidget extends PatternInputWidget {
+
+	private _onChangeSearchInEditorsBoxEmitter = this._register(new Emitter<void>());
+	onChangeSearchInEditorsBox = this._onChangeSearchInEditorsBoxEmitter.event;
+
+	private _onChangeSearchInChangedFilesBoxEmitter = this._register(new Emitter<void>());
+	onChangeSearchInChangedFilesBox = this._onChangeSearchInChangedFilesBoxEmitter.event;
+
+	constructor(parent: HTMLElement, contextViewProvider: IContextViewProvider, options: IOptions,
+		@IContextKeyService contextKeyService: IContextKeyService,
+		@IConfigurationService configurationService: IConfigurationService,
+		@IKeybindingService keybindingService: IKeybindingService,
+	) {
+		super(parent, contextViewProvider, options, contextKeyService, configurationService, keybindingService);
+	}
+
+	private useSearchInEditorsBox!: Toggle;
+	private useSearchInChangedFilesBox!: Toggle;
+
+	override dispose(): void {
+		super.dispose();
+		this.useSearchInEditorsBox.dispose();
+		this.useSearchInChangedFilesBox.dispose();
+	}
+
+	onlySearchInOpenEditors(): boolean {
+		return this.useSearchInEditorsBox.checked;
+	}
+
+	setOnlySearchInOpenEditors(value: boolean) {
+		this.useSearchInEditorsBox.checked = value;
+		this._onChangeSearchInEditorsBoxEmitter.fire();
+	}
+
+	onlySearchInChangedFiles(): boolean {
+		return this.useSearchInChangedFilesBox.checked;
+	}
+
+	setOnlySearchInChangedFiles(value: boolean) {
+		this.useSearchInChangedFilesBox.checked = value;
+		this._onChangeSearchInChangedFilesBoxEmitter.fire();
+	}
+
+	setOnlySearchInChangedFilesEnabled(enabled: boolean) {
+		if (enabled) {
+			this.useSearchInChangedFilesBox.enable();
+		} else {
+			this.useSearchInChangedFilesBox.checked = false;
+			this.useSearchInChangedFilesBox.disable();
+		}
+	}
+
+	protected override getSubcontrolsWidth(): number {
+		return super.getSubcontrolsWidth() + this.useSearchInEditorsBox.width() + this.useSearchInChangedFilesBox.width();
+	}
+
+	protected override renderSubcontrols(controlsDiv: HTMLDivElement): void {
+		this.useSearchInChangedFilesBox = this._register(new Toggle({
+			icon: Codicon.editCode,
+			title: nls.localize('onlySearchInChangedFiles', "Search only in Changed Files (Source Control)"),
+			isChecked: false,
+			...defaultToggleStyles
+		}));
+		this.useSearchInChangedFilesBox.disable();
+		this._register(this.useSearchInChangedFilesBox.onChange(viaKeyboard => {
+			if (this.useSearchInChangedFilesBox.checked) {
+				this.useSearchInEditorsBox.checked = false;
+			}
+			this._onChangeSearchInChangedFilesBoxEmitter.fire();
+			if (!viaKeyboard) {
+				this.inputBox.focus();
+			}
+		}));
+
+		this.useSearchInEditorsBox = this._register(new Toggle({
+			icon: Codicon.book,
+			title: nls.localize('onlySearchInOpenEditors', "Search only in Open Editors"),
+			isChecked: false,
+			...defaultToggleStyles
+		}));
+		this._register(this.useSearchInEditorsBox.onChange(viaKeyboard => {
+			if (this.useSearchInEditorsBox.checked) {
+				this.useSearchInChangedFilesBox.checked = false;
+			}
+			this._onChangeSearchInEditorsBoxEmitter.fire();
+			if (!viaKeyboard) {
+				this.inputBox.focus();
+			}
+		}));
+
+		controlsDiv.appendChild(this.useSearchInChangedFilesBox.domNode);
+		controlsDiv.appendChild(this.useSearchInEditorsBox.domNode);
+		super.renderSubcontrols(controlsDiv);
+	}
+}
+
 export class ExcludePatternInputWidget extends PatternInputWidget {
 
 	private _onChangeIgnoreBoxEmitter = this._register(new Emitter<void>());
 	onChangeIgnoreBox = this._onChangeIgnoreBoxEmitter.event;
 
-	constructor(parent: HTMLElement, contextViewProvider: IContextViewProvider, options: IOptions = Object.create(null),
-		@IThemeService themeService: IThemeService,
-		@IContextKeyService contextKeyService: IContextKeyService
+	constructor(parent: HTMLElement, contextViewProvider: IContextViewProvider, options: IOptions,
+		@IContextKeyService contextKeyService: IContextKeyService,
+		@IConfigurationService configurationService: IConfigurationService,
+		@IKeybindingService keybindingService: IKeybindingService,
 	) {
-		super(parent, contextViewProvider, options, themeService, contextKeyService);
+		super(parent, contextViewProvider, options, contextKeyService, configurationService, keybindingService);
 	}
 
-	private useExcludesAndIgnoreFilesBox!: Checkbox;
+	private useExcludesAndIgnoreFilesBox!: Toggle;
 
-	dispose(): void {
+	override dispose(): void {
 		super.dispose();
 		this.useExcludesAndIgnoreFilesBox.dispose();
 	}
@@ -203,18 +304,20 @@ export class ExcludePatternInputWidget extends PatternInputWidget {
 
 	setUseExcludesAndIgnoreFiles(value: boolean) {
 		this.useExcludesAndIgnoreFilesBox.checked = value;
+		this._onChangeIgnoreBoxEmitter.fire();
 	}
 
-	protected getSubcontrolsWidth(): number {
+	protected override getSubcontrolsWidth(): number {
 		return super.getSubcontrolsWidth() + this.useExcludesAndIgnoreFilesBox.width();
 	}
 
-	protected renderSubcontrols(controlsDiv: HTMLDivElement): void {
-		this.useExcludesAndIgnoreFilesBox = this._register(new Checkbox({
+	protected override renderSubcontrols(controlsDiv: HTMLDivElement): void {
+		this.useExcludesAndIgnoreFilesBox = this._register(new Toggle({
 			icon: Codicon.exclude,
 			actionClassName: 'useExcludesAndIgnoreFiles',
 			title: nls.localize('useExcludesAndIgnoreFilesDescription', "Use Exclude Settings and Ignore Files"),
 			isChecked: true,
+			...defaultToggleStyles
 		}));
 		this._register(this.useExcludesAndIgnoreFilesBox.onChange(viaKeyboard => {
 			this._onChangeIgnoreBoxEmitter.fire();
@@ -222,7 +325,6 @@ export class ExcludePatternInputWidget extends PatternInputWidget {
 				this.inputBox.focus();
 			}
 		}));
-		this._register(attachCheckboxStyler(this.useExcludesAndIgnoreFilesBox, this.themeService));
 
 		controlsDiv.appendChild(this.useExcludesAndIgnoreFilesBox.domNode);
 		super.renderSubcontrols(controlsDiv);

@@ -1,6 +1,9 @@
 {
 	"comments": {
-		"lineComment": "#"
+		"lineComment": {
+			"comment": "#",
+			"noIndent": true
+		}
 	},
 	"brackets": [
 		[
@@ -17,6 +20,18 @@
 		]
 	],
 	"autoClosingPairs": [
+		[
+			"{",
+			"}"
+		],
+		[
+			"[",
+			"]"
+		],
+		[
+			"(",
+			")"
+		],
 		{
 			"open": "'",
 			"close": "'",

@@ -3,95 +3,161 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITelemetryService, ITelemetryInfo, ITelemetryData } from 'vs/platform/telemetry/common/telemetry';
-import { NullTelemetryService, combinedAppender, ITelemetryAppender } from 'vs/platform/telemetry/common/telemetryUtils';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { Disposable } from 'vs/base/common/lifecycle';
-import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
-import { ILoggerService } from 'vs/platform/log/common/log';
-import { TelemetryService as BaseTelemetryService, ITelemetryServiceConfig } from 'vs/platform/telemetry/common/telemetryService';
-import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
-import { ClassifiedEvent, StrictPropertyCheck, GDPRClassification } from 'vs/platform/telemetry/common/gdprTypings';
-import { IStorageService } from 'vs/platform/storage/common/storage';
-import { resolveWorkbenchCommonProperties } from 'vs/workbench/services/telemetry/browser/workbenchCommonProperties';
-import { IProductService } from 'vs/platform/product/common/productService';
-import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
-import { TelemetryLogAppender } from 'vs/platform/telemetry/common/telemetryLogAppender';
-
-class WebTelemetryAppender implements ITelemetryAppender {
-
-	constructor(private _appender: IRemoteAgentService) { }
-
-	log(eventName: string, data: any): void {
-		this._appender.logTelemetry(eventName, data);
-	}
-
-	flush(): Promise<void> {
-		return this._appender.flushTelemetry();
-	}
-}
+import { Disposable } from '../../../../base/common/lifecycle.js';
+import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
+import { ILoggerService } from '../../../../platform/log/common/log.js';
+import { IProductService } from '../../../../platform/product/common/productService.js';
+import { IStorageService } from '../../../../platform/storage/common/storage.js';
+import { OneDataSystemWebAppender } from '../../../../platform/telemetry/browser/1dsAppender.js';
+import { ClassifiedEvent, IGDPRProperty, OmitMetadata, StrictPropertyCheck } from '../../../../platform/telemetry/common/gdprTypings.js';
+import { ITelemetryData, ITelemetryService, TelemetryLevel, TELEMETRY_SETTING_ID } from '../../../../platform/telemetry/common/telemetry.js';
+import { TelemetryLogAppender } from '../../../../platform/telemetry/common/telemetryLogAppender.js';
+import { ITelemetryServiceConfig, TelemetryService as BaseTelemetryService } from '../../../../platform/telemetry/common/telemetryService.js';
+import { getTelemetryLevel, isInternalTelemetry, isLoggingOnly, ITelemetryAppender, NullTelemetryService, supportsTelemetry } from '../../../../platform/telemetry/common/telemetryUtils.js';
+import { IBrowserWorkbenchEnvironmentService } from '../../environment/browser/environmentService.js';
+import { IRemoteAgentService } from '../../remote/common/remoteAgentService.js';
+import { IMeteredConnectionService } from '../../../../platform/meteredConnection/common/meteredConnection.js';
+import { mainWindow } from '../../../../base/browser/window.js';
+import { resolveWorkbenchCommonProperties } from './workbenchCommonProperties.js';
+import { experimentsEnabled } from '../common/workbenchTelemetryUtils.js';
+import { IRequestService, NO_FETCH_TELEMETRY } from '../../../../platform/request/common/request.js';
 
 export class TelemetryService extends Disposable implements ITelemetryService {
 
 	declare readonly _serviceBrand: undefined;
 
-	private impl: ITelemetryService;
-	public readonly sendErrorTelemetry = false;
+	private impl: ITelemetryService = NullTelemetryService;
+	public readonly sendErrorTelemetry = true;
+
+	get sessionId(): string { return this.impl.sessionId; }
+	get machineId(): string { return this.impl.machineId; }
+	get sqmId(): string { return this.impl.sqmId; }
+	get devDeviceId(): string { return this.impl.devDeviceId; }
+	get firstSessionDate(): string { return this.impl.firstSessionDate; }
+	get msftInternal(): boolean | undefined { return this.impl.msftInternal; }
 
 	constructor(
-		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
+		@IBrowserWorkbenchEnvironmentService environmentService: IBrowserWorkbenchEnvironmentService,
 		@ILoggerService loggerService: ILoggerService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IStorageService storageService: IStorageService,
 		@IProductService productService: IProductService,
-		@IRemoteAgentService remoteAgentService: IRemoteAgentService
+		@IRemoteAgentService remoteAgentService: IRemoteAgentService,
+		@IMeteredConnectionService meteredConnectionService: IMeteredConnectionService,
+		@IRequestService requestService: IRequestService
 	) {
 		super();
 
-		if (!!productService.enableTelemetry) {
-			const config: ITelemetryServiceConfig = {
-				appender: combinedAppender(new WebTelemetryAppender(remoteAgentService), new TelemetryLogAppender(loggerService, environmentService)),
-				commonProperties: resolveWorkbenchCommonProperties(storageService, productService.commit, productService.version, environmentService.remoteAuthority, environmentService.options && environmentService.options.resolveCommonTelemetryProperties),
-				sendErrorTelemetry: false,
-			};
+		this.impl = this.initializeService(environmentService, loggerService, configurationService, storageService, productService, remoteAgentService, meteredConnectionService);
 
-			this.impl = this._register(new BaseTelemetryService(config, configurationService));
-		} else {
-			this.impl = NullTelemetryService;
-		}
+		// When the level changes it could change from off to on and we want to make sure telemetry is properly intialized
+		this._register(configurationService.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration(TELEMETRY_SETTING_ID)) {
+				this.impl = this.initializeService(environmentService, loggerService, configurationService, storageService, productService, remoteAgentService, meteredConnectionService);
+			}
+		}));
+
+		this._register(requestService.onDidCompleteRequest(e => {
+			if (e.callSite === NO_FETCH_TELEMETRY || productService.quality === 'stable') {
+				return;
+			}
+			type FetchCallClassification = {
+				owner: 'lramos15';
+				comment: 'Tracks fetch requests made through the request service';
+				callSite: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The call site that initiated the request.' };
+				latency: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'Time in milliseconds for the request to complete.' };
+				statusCode: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'HTTP status code of the response.' };
+			};
+			type FetchCallEvent = {
+				callSite: string;
+				latency: number;
+				statusCode: number | undefined;
+			};
+			this.publicLog2<FetchCallEvent, FetchCallClassification>('fetchCall', {
+				callSite: e.callSite,
+				latency: e.latency,
+				statusCode: e.statusCode,
+			});
+		}));
 	}
 
-	setEnabled(value: boolean): void {
-		return this.impl.setEnabled(value);
+	/**
+	 * Initializes the telemetry service to be a full fledged service.
+	 * This is only done once and only when telemetry is enabled as this will also ping the endpoint to
+	 * ensure its not adblocked and we can send telemetry
+	 */
+	private initializeService(
+		environmentService: IBrowserWorkbenchEnvironmentService,
+		loggerService: ILoggerService,
+		configurationService: IConfigurationService,
+		storageService: IStorageService,
+		productService: IProductService,
+		remoteAgentService: IRemoteAgentService,
+		meteredConnectionService: IMeteredConnectionService
+	) {
+		const telemetrySupported = supportsTelemetry(productService, environmentService) && productService.aiConfig?.ariaKey;
+		if (telemetrySupported && getTelemetryLevel(configurationService) !== TelemetryLevel.NONE && this.impl === NullTelemetryService) {
+			// If remote server is present send telemetry through that, else use the client side appender
+			const appenders: ITelemetryAppender[] = [];
+			const isInternal = isInternalTelemetry(productService, configurationService);
+			if (!isLoggingOnly(productService, environmentService)) {
+				if (remoteAgentService.getConnection() !== null) {
+					const remoteTelemetryProvider = {
+						log: remoteAgentService.logTelemetry.bind(remoteAgentService),
+						flush: remoteAgentService.flushTelemetry.bind(remoteAgentService)
+					};
+					appenders.push(remoteTelemetryProvider);
+				} else {
+					appenders.push(new OneDataSystemWebAppender(isInternal, 'monacoworkbench', null, productService.aiConfig?.ariaKey));
+				}
+			}
+			appenders.push(new TelemetryLogAppender('', false, loggerService, environmentService, productService));
+			const config: ITelemetryServiceConfig = {
+				appenders,
+				commonProperties: resolveWorkbenchCommonProperties(storageService, productService, environmentService, isInternal, environmentService.options && environmentService.options.resolveCommonTelemetryProperties),
+				// Use the web origin as a cleanup pattern (analogous to appRoot on desktop).
+				// This strips the origin from web URLs in stack traces so the useful
+				// relative path (e.g. /static/build/bundle.js:1:200953) is preserved
+				// for debugging, while the origin itself is removed.
+				piiPaths: [mainWindow.location.origin],
+				sendErrorTelemetry: this.sendErrorTelemetry,
+				waitForExperimentProperties: experimentsEnabled(configurationService, productService, environmentService),
+				meteredConnectionService,
+			};
+
+			return this._register(new BaseTelemetryService(config, configurationService, productService));
+		}
+		return this.impl;
 	}
 
 	setExperimentProperty(name: string, value: string): void {
 		return this.impl.setExperimentProperty(name, value);
 	}
 
-	get isOptedIn(): boolean {
-		return this.impl.isOptedIn;
+	setCommonProperty(name: string, value: string): void {
+		this.impl.setCommonProperty(name, value);
 	}
 
-	publicLog(eventName: string, data?: ITelemetryData, anonymizeFilePaths?: boolean): Promise<void> {
-		return this.impl.publicLog(eventName, data, anonymizeFilePaths);
+	get telemetryLevel(): TelemetryLevel {
+		return this.impl.telemetryLevel;
 	}
 
-	publicLog2<E extends ClassifiedEvent<T> = never, T extends GDPRClassification<T> = never>(eventName: string, data?: StrictPropertyCheck<T, E>, anonymizeFilePaths?: boolean) {
-		return this.publicLog(eventName, data as ITelemetryData, anonymizeFilePaths);
+	publicLog(eventName: string, data?: ITelemetryData) {
+		this.impl.publicLog(eventName, data);
 	}
 
-	publicLogError(errorEventName: string, data?: ITelemetryData): Promise<void> {
-		return this.impl.publicLog(errorEventName, data);
+	publicLog2<E extends ClassifiedEvent<OmitMetadata<T>> = never, T extends IGDPRProperty = never>(eventName: string, data?: StrictPropertyCheck<T, E>) {
+		this.publicLog(eventName, data as ITelemetryData);
 	}
 
-	publicLogError2<E extends ClassifiedEvent<T> = never, T extends GDPRClassification<T> = never>(eventName: string, data?: StrictPropertyCheck<T, E>) {
-		return this.publicLogError(eventName, data as ITelemetryData);
+	publicLogError(errorEventName: string, data?: ITelemetryData) {
+		this.impl.publicLog(errorEventName, data);
 	}
 
-	getTelemetryInfo(): Promise<ITelemetryInfo> {
-		return this.impl.getTelemetryInfo();
+	publicLogError2<E extends ClassifiedEvent<OmitMetadata<T>> = never, T extends IGDPRProperty = never>(eventName: string, data?: StrictPropertyCheck<T, E>) {
+		this.publicLogError(eventName, data as ITelemetryData);
 	}
 }
 
-registerSingleton(ITelemetryService, TelemetryService);
+registerSingleton(ITelemetryService, TelemetryService, InstantiationType.Delayed);

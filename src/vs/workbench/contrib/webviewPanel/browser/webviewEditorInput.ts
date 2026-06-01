@@ -3,92 +3,145 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Lazy } from 'vs/base/common/lazy';
-import { URI } from 'vs/base/common/uri';
-import { EditorInput, GroupIdentifier, IEditorInput, Verbosity } from 'vs/workbench/common/editor';
-import { IWebviewService, WebviewIcons, WebviewOverlay } from 'vs/workbench/contrib/webview/browser/webview';
-import { Schemas } from 'vs/base/common/network';
+import { CodeWindow } from '../../../../base/browser/window.js';
+import { Schemas } from '../../../../base/common/network.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
+import { URI } from '../../../../base/common/uri.js';
+import { generateUuid } from '../../../../base/common/uuid.js';
+import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
+import { isDark } from '../../../../platform/theme/common/theme.js';
+import { IThemeService } from '../../../../platform/theme/common/themeService.js';
+import { EditorInputCapabilities, GroupIdentifier, IUntypedEditorInput, Verbosity } from '../../../common/editor.js';
+import { EditorInput } from '../../../common/editor/editorInput.js';
+import { IOverlayWebview } from '../../webview/browser/webview.js';
+
+export interface WebviewInputInitInfo {
+	readonly viewType: string;
+	readonly providedId: string | undefined;
+	readonly name: string;
+	readonly iconPath: WebviewIconPath | undefined;
+}
 
 export class WebviewInput extends EditorInput {
 
 	public static typeId = 'workbench.editors.webviewInput';
 
-	private _name: string;
-	private _iconPath?: WebviewIcons;
+	public override get typeId(): string {
+		return WebviewInput.typeId;
+	}
+
+	public override get editorId(): string {
+		return this.viewType;
+	}
+
+	public override get capabilities(): EditorInputCapabilities {
+		return EditorInputCapabilities.Readonly | EditorInputCapabilities.Singleton | EditorInputCapabilities.CanDropIntoEditor;
+	}
+
+	private readonly _resourceId = generateUuid();
+
+	private _webviewTitle: string;
+	private _iconPath?: WebviewIconPath;
 	private _group?: GroupIdentifier;
 
-	private _webview: Lazy<WebviewOverlay>;
+	private _webview: IOverlayWebview;
 
 	private _hasTransfered = false;
 
 	get resource() {
 		return URI.from({
 			scheme: Schemas.webviewPanel,
-			path: `webview-panel/webview-${this.id}`
+			path: `webview-panel/webview-${this.providerId}-${this._resourceId}`
 		});
 	}
 
+	public readonly viewType: string;
+	public readonly providerId: string | undefined;
+
 	constructor(
-		public readonly id: string,
-		public readonly viewType: string,
-		name: string,
-		webview: Lazy<WebviewOverlay>,
-		@IWebviewService private readonly _webviewService: IWebviewService,
+		init: WebviewInputInitInfo,
+		webview: IOverlayWebview,
+		@IThemeService private readonly _themeService: IThemeService,
 	) {
 		super();
-		this._name = name;
+
+		this.viewType = init.viewType;
+		this.providerId = init.providedId;
+
+		this._webviewTitle = init.name;
+		this._iconPath = init.iconPath;
 		this._webview = webview;
+
+		this._register(_themeService.onDidColorThemeChange(() => {
+			// Potentially update icon
+			this._onDidChangeLabel.fire();
+		}));
 	}
 
-	dispose() {
+	override dispose() {
 		if (!this.isDisposed()) {
 			if (!this._hasTransfered) {
-				this._webview.rawValue?.dispose();
+				this._webview?.dispose();
 			}
 		}
 		super.dispose();
 	}
 
-	public getTypeId(): string {
-		return WebviewInput.typeId;
+	public override getName(): string {
+		return this._webviewTitle;
 	}
 
-	public getName(): string {
-		return this._name;
-	}
-
-	public getTitle(_verbosity?: Verbosity): string {
+	public override getTitle(_verbosity?: Verbosity): string {
 		return this.getName();
 	}
 
-	public getDescription(): string | undefined {
+	public override getDescription(): string | undefined {
 		return undefined;
 	}
 
-	public setName(value: string): void {
-		this._name = value;
+	public setWebviewTitle(value: string): void {
+		this._webviewTitle = value;
+		this.webview.setTitle(value);
 		this._onDidChangeLabel.fire();
 	}
 
-	public get webview(): WebviewOverlay {
-		return this._webview.getValue();
+	public getWebviewTitle(): string | undefined {
+		return this._webviewTitle;
+	}
+
+	public get webview(): IOverlayWebview {
+		return this._webview;
 	}
 
 	public get extension() {
 		return this.webview.extension;
 	}
 
+	override getIcon(): URI | ThemeIcon | undefined {
+		if (!this._iconPath) {
+			return;
+		}
+
+		if (ThemeIcon.isThemeIcon(this._iconPath)) {
+			return this._iconPath;
+		}
+
+		return isDark(this._themeService.getColorTheme().type)
+			? this._iconPath.dark
+			: (this._iconPath.light ?? this._iconPath.dark);
+	}
+
 	public get iconPath() {
 		return this._iconPath;
 	}
 
-	public set iconPath(value: WebviewIcons | undefined) {
+	public set iconPath(value: WebviewIconPath | undefined) {
 		this._iconPath = value;
-		this._webviewService.setIcons(this.id, value);
+		this._onDidChangeLabel.fire();
 	}
 
-	public matches(other: IEditorInput): boolean {
-		return other === this;
+	public override matches(other: EditorInput | IUntypedEditorInput): boolean {
+		return super.matches(other) || other === this;
 	}
 
 	public get group(): GroupIdentifier | undefined {
@@ -99,10 +152,6 @@ export class WebviewInput extends EditorInput {
 		this._group = group;
 	}
 
-	public supportsSplitEditor() {
-		return false;
-	}
-
 	protected transfer(other: WebviewInput): WebviewInput | undefined {
 		if (this._hasTransfered) {
 			return undefined;
@@ -111,4 +160,12 @@ export class WebviewInput extends EditorInput {
 		other._webview = this._webview;
 		return other;
 	}
+
+	public claim(claimant: unknown, targetWindow: CodeWindow, scopedContextKeyService: IContextKeyService | undefined): void {
+		return this._webview.claim(claimant, targetWindow, scopedContextKeyService);
+	}
 }
+export type WebviewIconPath = ThemeIcon | {
+	readonly light: URI;
+	readonly dark: URI;
+};

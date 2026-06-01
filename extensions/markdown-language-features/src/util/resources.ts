@@ -11,23 +11,22 @@ export interface WebviewResourceProvider {
 	readonly cspSource: string;
 }
 
-export function normalizeResource(
-	base: vscode.Uri,
-	resource: vscode.Uri
-): vscode.Uri {
-	// If we  have a windows path and are loading a workspace with an authority,
-	// make sure we use a unc path with an explicit localhost authority.
-	//
-	// Otherwise, the `<base>` rule will insert the authority into the resolved resource
-	// URI incorrectly.
-	if (base.authority && !resource.authority) {
-		const driveMatch = resource.path.match(/^\/(\w):\//);
-		if (driveMatch) {
-			return vscode.Uri.file(`\\\\localhost\\${driveMatch[1]}$\\${resource.fsPath.replace(/^\w:\\/, '')}`).with({
-				fragment: resource.fragment,
-				query: resource.query
-			});
-		}
+export function areUrisEqual(uri1: vscode.Uri, uri2: vscode.Uri): boolean {
+	if (uri1.scheme !== uri2.scheme) {
+		return false;
 	}
-	return resource;
+
+	if (uri1.authority !== uri2.authority) {
+		return false;
+	}
+
+	if (uri1.scheme === 'file') {
+		if (process.platform === 'win32' || process.platform === 'darwin') {
+			return uri1.fsPath.toLowerCase() === uri2.fsPath.toLowerCase();
+		}
+
+		return uri1.fsPath === uri2.fsPath;
+	}
+
+	return uri1.toString() === uri2.toString();
 }

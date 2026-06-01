@@ -3,13 +3,25 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ITerminalInstance, ITerminalService } from 'vs/workbench/contrib/terminal/browser/terminal';
-import { Emitter } from 'vs/base/common/event';
-import { Disposable, IDisposable } from 'vs/base/common/lifecycle';
-import { IDebugService, IDebugSession, IReplElement } from 'vs/workbench/contrib/debug/common/debug';
+import { ITerminalInstance, ITerminalService } from '../../terminal/browser/terminal.js';
+import { Emitter } from '../../../../base/common/event.js';
+import { Disposable, DisposableMap, IDisposable } from '../../../../base/common/lifecycle.js';
+import { IDebugService, IDebugSession, IReplElement } from '../../debug/common/debug.js';
+import { removeAnsiEscapeCodes } from '../../../../base/common/strings.js';
+import { RunOnceWorker } from '../../../../base/common/async.js';
 
 export class UrlFinder extends Disposable {
-	private static readonly terminalCodesRegex = /(?:\u001B|\u009B)[\[\]()#;?]*(?:(?:(?:[a-zA-Z0-9]*(?:;[a-zA-Z0-9]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[0-9A-PR-TZcf-ntqry=><~]))/g;
+	/**
+	 * Debounce time in ms before processing accumulated terminal data.
+	 */
+	private static readonly dataDebounceTimeout = 500;
+
+	/**
+	 * Maximum amount of data to accumulate before skipping URL detection.
+	 * When data exceeds this threshold, it indicates high-throughput scenarios
+	 * (like games or animations) where URL detection is unlikely to find useful results.
+	 */
+	private static readonly maxDataLength = 10000;
 	/**
 	 * Local server url pattern matching following urls:
 	 * http://localhost:3000/ - commonly used across multiple frameworks
@@ -17,7 +29,8 @@ export class UrlFinder extends Disposable {
 	 * http://:8080 - Beego Golang
 	 * http://0.0.0.0:4000 - Elixir Phoenix
 	 */
-	private static readonly localUrlRegex = /\b\w{2,20}:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|:\d{2,5})[\w\-\.\~:\/\?\#[\]\@!\$&\(\)\*\+\,\;\=]*/gim;
+	private static readonly localUrlRegex = /\b\w{0,20}(?::\/\/)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|:\d{2,5})[\w\-\.\~:\/\?\#[\]\@!\$&\(\)\*\+\,\;\=]*/gim;
+	private static readonly extractPortRegex = /(localhost|127\.0\.0\.1|0\.0\.0\.0):(\d{1,5})/;
 	/**
 	 * https://github.com/microsoft/vscode-remote-release/issues/3949
 	 */
@@ -25,22 +38,24 @@ export class UrlFinder extends Disposable {
 
 	private static readonly excludeTerminals = ['Dev Containers'];
 
-	private _onDidMatchLocalUrl: Emitter<{ host: string, port: number }> = new Emitter();
-	public readonly onDidMatchLocalUrl = this._onDidMatchLocalUrl.event;
-	private listeners: Map<ITerminalInstance | string, IDisposable> = new Map();
+	private readonly _onDidMatchLocalUrl = this._register(new Emitter<{ host: string; port: number }>());
+	readonly onDidMatchLocalUrl = this._onDidMatchLocalUrl.event;
+	private readonly listeners: Map<ITerminalInstance | string, IDisposable> = new Map();
+	private readonly terminalDataWorkers = this._register(new DisposableMap<ITerminalInstance, RunOnceWorker<string>>());
 
 	constructor(terminalService: ITerminalService, debugService: IDebugService) {
 		super();
 		// Terminal
-		terminalService.terminalInstances.forEach(instance => {
+		terminalService.instances.forEach(instance => {
 			this.registerTerminalInstance(instance);
 		});
-		this._register(terminalService.onInstanceCreated(instance => {
+		this._register(terminalService.onDidCreateInstance(instance => {
 			this.registerTerminalInstance(instance);
 		}));
-		this._register(terminalService.onInstanceDisposed(instance => {
+		this._register(terminalService.onDidDisposeInstance(instance => {
 			this.listeners.get(instance)?.dispose();
 			this.listeners.delete(instance);
+			this.terminalDataWorkers.deleteAndDispose(instance);
 		}));
 
 		// Debug
@@ -51,7 +66,7 @@ export class UrlFinder extends Disposable {
 				}));
 			}
 		}));
-		this._register(debugService.onDidEndSession(session => {
+		this._register(debugService.onDidEndSession(({ session }) => {
 			if (this.listeners.has(session.getId())) {
 				this.listeners.get(session.getId())?.dispose();
 				this.listeners.delete(session.getId());
@@ -62,12 +77,30 @@ export class UrlFinder extends Disposable {
 	private registerTerminalInstance(instance: ITerminalInstance) {
 		if (!UrlFinder.excludeTerminals.includes(instance.title)) {
 			this.listeners.set(instance, instance.onData(data => {
-				this.processData(data);
+				this.getOrCreateWorker(instance).work(data);
 			}));
 		}
 	}
 
-	private replPositions: Map<string, { position: number, tail: IReplElement }> = new Map();
+	private getOrCreateWorker(instance: ITerminalInstance): RunOnceWorker<string> {
+		let worker = this.terminalDataWorkers.get(instance);
+		if (!worker) {
+			worker = new RunOnceWorker<string>(chunks => this.processTerminalData(chunks), UrlFinder.dataDebounceTimeout);
+			this.terminalDataWorkers.set(instance, worker);
+		}
+		return worker;
+	}
+
+	private processTerminalData(chunks: string[]): void {
+		// Skip processing if data exceeds threshold (high-throughput scenario like games)
+		const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+		if (totalLength > UrlFinder.maxDataLength) {
+			return;
+		}
+		this.processData(chunks.join(''));
+	}
+
+	private replPositions: Map<string, { position: number; tail: IReplElement }> = new Map();
 	private processNewReplElements(session: IDebugSession) {
 		const oldReplPosition = this.replPositions.get(session.getId());
 		const replElements = session.getReplElements();
@@ -88,25 +121,30 @@ export class UrlFinder extends Disposable {
 		}
 	}
 
-	dispose() {
+	override dispose() {
 		super.dispose();
-		const listeners = this.listeners.values();
-		for (const listener of listeners) {
+		for (const listener of this.listeners.values()) {
 			listener.dispose();
 		}
 	}
 
 	private processData(data: string) {
 		// strip ANSI terminal codes
-		data = data.replace(UrlFinder.terminalCodesRegex, '');
+		data = removeAnsiEscapeCodes(data);
 		const urlMatches = data.match(UrlFinder.localUrlRegex) || [];
 		if (urlMatches && urlMatches.length > 0) {
 			urlMatches.forEach((match) => {
 				// check if valid url
-				const serverUrl = new URL(match);
+				let serverUrl;
+				try {
+					serverUrl = new URL(match);
+				} catch (e) {
+					// Not a valid URL
+				}
 				if (serverUrl) {
 					// check if the port is a valid integer value
-					const port = parseFloat(serverUrl.port!);
+					const portMatch = match.match(UrlFinder.extractPortRegex);
+					const port = parseFloat(serverUrl.port ? serverUrl.port : (portMatch ? portMatch[2] : 'NaN'));
 					if (!isNaN(port) && Number.isInteger(port) && port > 0 && port <= 65535) {
 						// normalize the host name
 						let host = serverUrl.hostname;

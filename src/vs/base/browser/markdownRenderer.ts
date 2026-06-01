@@ -3,378 +3,1117 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as DOM from 'vs/base/browser/dom';
-import { createElement, FormattedTextRenderOptions } from 'vs/base/browser/formattedTextRenderer';
-import { onUnexpectedError } from 'vs/base/common/errors';
-import { IMarkdownString, parseHrefAndDimensions, removeMarkdownEscapes } from 'vs/base/common/htmlContent';
-import { defaultGenerator } from 'vs/base/common/idGenerator';
-import * as marked from 'vs/base/common/marked/marked';
-import { insane, InsaneOptions } from 'vs/base/common/insane/insane';
-import { parse } from 'vs/base/common/marshalling';
-import { cloneAndChange } from 'vs/base/common/objects';
-import { escape } from 'vs/base/common/strings';
-import { URI } from 'vs/base/common/uri';
-import { FileAccess, Schemas } from 'vs/base/common/network';
-import { markdownEscapeEscapedCodicons } from 'vs/base/common/codicons';
-import { resolvePath } from 'vs/base/common/resources';
-import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
-import { renderCodicons } from 'vs/base/browser/codicons';
-import { Event } from 'vs/base/common/event';
-import { domEvent } from 'vs/base/browser/event';
+import { onUnexpectedError } from '../common/errors.js';
+import { escapeDoubleQuotes, IMarkdownString, MarkdownStringTrustedOptions, parseHrefAndDimensions, removeMarkdownEscapes } from '../common/htmlContent.js';
+import { markdownEscapeEscapedIcons } from '../common/iconLabels.js';
+import { defaultGenerator } from '../common/idGenerator.js';
+import { KeyCode } from '../common/keyCodes.js';
+import { DisposableStore, IDisposable } from '../common/lifecycle.js';
+import * as marked from '../common/marked/marked.js';
+import { parse } from '../common/marshalling.js';
+import { FileAccess, Schemas } from '../common/network.js';
+import { cloneAndChange } from '../common/objects.js';
+import { basename as pathBasename } from '../common/path.js';
+import { basename, dirname, resolvePath } from '../common/resources.js';
+import { escape } from '../common/strings.js';
+import { URI, UriComponents } from '../common/uri.js';
+import * as DOM from './dom.js';
+import * as domSanitize from './domSanitize.js';
+import { convertTagToPlaintext } from './domSanitize.js';
+import { StandardKeyboardEvent } from './keyboardEvent.js';
+import { StandardMouseEvent } from './mouseEvent.js';
+import { renderIcon, renderLabelWithIcons } from './ui/iconLabel/iconLabels.js';
 
-export interface MarkedOptions extends marked.MarkedOptions {
-	baseUrl?: never;
-}
-
-export interface MarkdownRenderOptions extends FormattedTextRenderOptions {
-	codeBlockRenderer?: (modeId: string, value: string) => Promise<HTMLElement>;
-	codeBlockRenderCallback?: () => void;
-	baseUrl?: URI;
-}
-
-const _ttpInsane = window.trustedTypes?.createPolicy('insane', {
-	createHTML(value, options: InsaneOptions): string {
-		return insane(value, options);
-	}
-});
+export type MarkdownActionHandler = (linkContent: string, mdStr: IMarkdownString) => void;
 
 /**
- * Low-level way create a html element from a markdown string.
- *
- * **Note** that for most cases you should be using [`MarkdownRenderer`](./src/vs/editor/browser/core/markdownRenderer.ts)
- * which comes with support for pretty code block rendering and which uses the default way of handling links.
+ * Options for the rendering of markdown with {@link renderMarkdown}.
  */
-export function renderMarkdown(markdown: IMarkdownString, options: MarkdownRenderOptions = {}, markedOptions: MarkedOptions = {}): HTMLElement {
-	const element = createElement(options);
+export interface MarkdownRenderOptions {
+	readonly codeBlockRenderer?: (languageId: string, value: string) => Promise<HTMLElement>;
+	readonly codeBlockRendererSync?: (languageId: string, value: string, raw?: string) => HTMLElement;
+	readonly asyncRenderCallback?: () => void;
 
-	const _uriMassage = function (part: string): string {
-		let data: any;
-		try {
-			data = parse(decodeURIComponent(part));
-		} catch (e) {
-			// ignore
-		}
-		if (!data) {
-			return part;
-		}
-		data = cloneAndChange(data, value => {
-			if (markdown.uris && markdown.uris[value]) {
-				return URI.revive(markdown.uris[value]);
-			} else {
-				return undefined;
-			}
-		});
-		return encodeURIComponent(JSON.stringify(data));
+	readonly actionHandler?: MarkdownActionHandler;
+
+	readonly fillInIncompleteTokens?: boolean;
+
+	readonly sanitizerConfig?: MarkdownSanitizerConfig;
+
+	readonly markedOptions?: MarkdownRendererMarkedOptions;
+	readonly markedExtensions?: marked.MarkedExtension[];
+}
+
+/**
+ * Subset of options passed to `Marked` for rendering markdown.
+ */
+export interface MarkdownRendererMarkedOptions {
+	readonly gfm?: boolean;
+	readonly breaks?: boolean;
+}
+
+export interface MarkdownSanitizerConfig {
+	readonly replaceWithPlaintext?: boolean;
+	readonly allowedTags?: {
+		readonly override: readonly string[];
 	};
-
-	const _href = function (href: string, isDomUri: boolean): string {
-		const data = markdown.uris && markdown.uris[href];
-		if (!data) {
-			return href; // no uri exists
-		}
-		let uri = URI.revive(data);
-		if (URI.parse(href).toString() === uri.toString()) {
-			return href; // no tranformation performed
-		}
-		if (isDomUri) {
-			// this URI will end up as "src"-attribute of a dom node
-			// and because of that special rewriting needs to be done
-			// so that the URI uses a protocol that's understood by
-			// browsers (like http or https)
-			return FileAccess.asBrowserUri(uri).toString(true);
-		}
-		if (uri.query) {
-			uri = uri.with({ query: _uriMassage(uri.query) });
-		}
-		return uri.toString();
+	readonly allowedAttributes?: {
+		readonly override: ReadonlyArray<string | domSanitize.SanitizeAttributeRule>;
 	};
+	readonly allowedLinkSchemes?: {
+		readonly augment: readonly string[];
+	};
+	readonly remoteImageIsAllowed?: (uri: URI) => boolean;
+}
 
-	// signal to code-block render that the
-	// element has been created
-	let signalInnerHTML: () => void;
-	const withInnerHTML = new Promise<void>(c => signalInnerHTML = c);
+/**
+ * Returns a human-readable tooltip string for a link href.
+ * For file:// URIs, converts to a decoded OS file system path to avoid
+ * showing raw URL-encoded paths (e.g. "C:\Users\..." instead of "file:///c%3A/Users/...").
+ */
+function getLinkTitle(href: string): string {
+	try {
+		const parsed = URI.parse(href);
+		if (parsed.scheme === Schemas.file) {
+			const path = parsed.fsPath;
+			const fragment = parsed.fragment;
+			return escapeDoubleQuotes(fragment ? `${path}#${fragment}` : path);
+		}
+	} catch {
+		// fall through
+	}
+	return '';
+}
 
-	const renderer = new marked.Renderer();
-	renderer.image = (href: string, title: string, text: string) => {
+const defaultMarkedRenderers = Object.freeze({
+	image: ({ href, title, text }: marked.Tokens.Image): string => {
 		let dimensions: string[] = [];
 		let attributes: string[] = [];
 		if (href) {
 			({ href, dimensions } = parseHrefAndDimensions(href));
-			href = _href(href, true);
-			try {
-				const hrefAsUri = URI.parse(href);
-				if (options.baseUrl && hrefAsUri.scheme === Schemas.file) { // absolute or relative local path, or file: uri
-					href = resolvePath(options.baseUrl, href).toString();
-				}
-			} catch (err) { }
-
-			attributes.push(`src="${href}"`);
+			attributes.push(`src="${escapeDoubleQuotes(href)}"`);
 		}
 		if (text) {
-			attributes.push(`alt="${text}"`);
+			attributes.push(`alt="${escapeDoubleQuotes(text)}"`);
 		}
 		if (title) {
-			attributes.push(`title="${title}"`);
+			attributes.push(`title="${escapeDoubleQuotes(title)}"`);
 		}
 		if (dimensions.length) {
 			attributes = attributes.concat(dimensions);
 		}
 		return '<img ' + attributes.join(' ') + '>';
-	};
-	renderer.link = (href, title, text): string => {
+	},
+
+	paragraph(this: marked.Renderer, { tokens }: marked.Tokens.Paragraph): string {
+		return `<p>${this.parser.parseInline(tokens)}</p>`;
+	},
+
+	link(this: marked.Renderer, { href, title, tokens }: marked.Tokens.Link): string {
+		let text = this.parser.parseInline(tokens);
+		if (typeof href !== 'string') {
+			return '';
+		}
+
 		// Remove markdown escapes. Workaround for https://github.com/chjj/marked/issues/829
 		if (href === text) { // raw link case
 			text = removeMarkdownEscapes(text);
 		}
-		href = _href(href, false);
-		if (options.baseUrl) {
-			const hasScheme = /^\w[\w\d+.-]*:/.test(href);
-			if (!hasScheme) {
-				href = resolvePath(options.baseUrl, href).toString();
-			}
-		}
-		title = removeMarkdownEscapes(title);
+
+		title = typeof title === 'string' ? escapeDoubleQuotes(removeMarkdownEscapes(title)) : '';
 		href = removeMarkdownEscapes(href);
-		if (
-			!href
-			|| href.match(/^data:|javascript:/i)
-			|| (href.match(/^command:/i) && !markdown.isTrusted)
-			|| href.match(/^command:(\/\/\/)?_workbench\.downloadResource/i)
-		) {
-			// drop the link
-			return text;
 
-		} else {
-			// HTML Encode href
-			href = href.replace(/&/g, '&amp;')
-				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;')
-				.replace(/"/g, '&quot;')
-				.replace(/'/g, '&#39;');
-			return `<a href="#" data-href="${href}" title="${title || href}">${text}</a>`;
+		// For file:// URIs without an explicit title, show the decoded OS path instead of
+		// the raw URL-encoded URI (e.g. display "C:\Users\..." instead of "file:///c%3A/Users/...")
+		if (!title && href.startsWith(`${Schemas.file}:`)) {
+			title = getLinkTitle(href);
 		}
-	};
-	renderer.paragraph = (text): string => {
-		if (markdown.supportThemeIcons) {
-			const elements = renderCodicons(text);
-			text = elements.map(e => typeof e === 'string' ? e : e.outerHTML).join('');
+
+		// HTML Encode href
+		href = href.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+
+		return `<a href="${href}" title="${title || href}" draggable="false">${text}</a>`;
+	},
+});
+
+/**
+ * Blockquote renderer that processes GitHub-style alert syntax.
+ * Transforms blockquotes like "> [!NOTE]" into structured alert markup with icons.
+ *
+ * Based on GitHub's alert syntax: https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts
+ */
+function createAlertBlockquoteRenderer(fallbackRenderer: (this: marked.Renderer, token: marked.Tokens.Blockquote) => string) {
+	return function (this: marked.Renderer, token: marked.Tokens.Blockquote): string {
+		const { tokens } = token;
+		// Check if this blockquote starts with alert syntax [!TYPE]
+		const firstToken = tokens[0];
+		if (firstToken?.type !== 'paragraph') {
+			return fallbackRenderer.call(this, token);
 		}
-		return `<p>${text}</p>`;
-	};
 
-	if (options.codeBlockRenderer) {
-		renderer.code = (code, lang) => {
-			const value = options.codeBlockRenderer!(lang, code);
-			// when code-block rendering is async we return sync
-			// but update the node with the real result later.
-			const id = defaultGenerator.nextId();
-			const promise = Promise.all([value, withInnerHTML]).then(values => {
-				const span = <HTMLDivElement>element.querySelector(`div[data-code="${id}"]`);
-				if (span) {
-					DOM.reset(span, values[0]);
-				}
-			}).catch(_err => {
-				// ignore
-			});
+		const paragraphTokens = firstToken.tokens;
+		if (!paragraphTokens || paragraphTokens.length === 0) {
+			return fallbackRenderer.call(this, token);
+		}
 
-			if (options.codeBlockRenderCallback) {
-				promise.then(options.codeBlockRenderCallback);
-			}
+		const firstTextToken = paragraphTokens[0];
+		if (firstTextToken?.type !== 'text') {
+			return fallbackRenderer.call(this, token);
+		}
 
-			return `<div class="code" data-code="${id}">${escape(code)}</div>`;
+		const pattern = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*?\n*/i;
+		const match = firstTextToken.raw.match(pattern);
+		if (!match) {
+			return fallbackRenderer.call(this, token);
+		}
+
+		// Remove the alert marker from the token
+		firstTextToken.raw = firstTextToken.raw.replace(pattern, '');
+		firstTextToken.text = firstTextToken.text.replace(pattern, '');
+
+		const alertIcons: Record<string, string> = {
+			'note': 'info',
+			'tip': 'light-bulb',
+			'important': 'comment',
+			'warning': 'alert',
+			'caution': 'stop'
 		};
+
+		const type = match[1];
+		const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+		const severity = type.toLowerCase();
+		const iconHtml = renderIcon({ id: alertIcons[severity] }).outerHTML;
+
+		// Render the remaining content
+		const content = this.parser.parse(tokens);
+
+		// Return alert markup with icon and severity (skipping the first 3 characters: `<p>`)
+		return `<blockquote data-severity="${severity}"><p><span>${iconHtml}${typeCapitalized}</span>${content.substring(3)}</blockquote>\n`;
+	};
+}
+
+export interface IRenderedMarkdown extends IDisposable {
+	readonly element: HTMLElement;
+}
+
+/**
+ * Low-level way create a html element from a markdown string.
+ *
+ * **Note** that for most cases you should be using {@link import('../../editor/browser/widget/markdownRenderer/browser/markdownRenderer.js').MarkdownRenderer MarkdownRenderer}
+ * which comes with support for pretty code block rendering and which uses the default way of handling links.
+ */
+export function renderMarkdown(markdown: IMarkdownString, options: MarkdownRenderOptions = {}, target?: HTMLElement): IRenderedMarkdown {
+	const disposables = new DisposableStore();
+	let isDisposed = false;
+
+	const markedInstance = new marked.Marked(...(options.markedExtensions ?? []));
+	const { renderer, codeBlocks, syncCodeBlocks } = createMarkdownRenderer(markedInstance, options, markdown);
+	const value = preprocessMarkdownString(markdown);
+
+	let renderedMarkdown: string;
+	if (options.fillInIncompleteTokens) {
+		// The defaults are applied by parse but not lexer()/parser(), and they need to be present
+		const opts: marked.MarkedOptions = {
+			...markedInstance.defaults,
+			...options.markedOptions,
+			renderer
+		};
+		const tokens = markedInstance.lexer(value, opts);
+		const newTokens = fillInIncompleteTokens(tokens);
+		renderedMarkdown = markedInstance.parser(newTokens, opts);
+	} else {
+		renderedMarkdown = markedInstance.parse(value, { ...options?.markedOptions, renderer, async: false });
 	}
 
+	// Rewrite theme icons
+	if (markdown.supportThemeIcons) {
+		const elements = renderLabelWithIcons(renderedMarkdown);
+		renderedMarkdown = elements.map(e => typeof e === 'string' ? e : e.outerHTML).join('');
+	}
+
+	const renderedContent = document.createElement('div');
+	const sanitizerConfig = getDomSanitizerConfig(markdown, options.sanitizerConfig ?? {});
+	domSanitize.safeSetInnerHtml(renderedContent, renderedMarkdown, sanitizerConfig);
+
+	// Rewrite links and images before potentially inserting them into the real dom
+	rewriteRenderedLinks(markdown, options, renderedContent);
+
+	let outElement: HTMLElement;
+	if (target) {
+		outElement = target;
+		DOM.reset(target, ...renderedContent.childNodes);
+	} else {
+		outElement = renderedContent;
+	}
+
+	if (codeBlocks.length > 0) {
+		Promise.all(codeBlocks).then((tuples) => {
+			if (isDisposed) {
+				return;
+			}
+			const renderedElements = new Map(tuples);
+			// eslint-disable-next-line no-restricted-syntax
+			const placeholderElements = outElement.querySelectorAll<HTMLDivElement>(`div[data-code]`);
+			for (const placeholderElement of placeholderElements) {
+				const renderedElement = renderedElements.get(placeholderElement.dataset['code'] ?? '');
+				if (renderedElement) {
+					DOM.reset(placeholderElement, renderedElement);
+				}
+			}
+			options.asyncRenderCallback?.();
+		});
+	} else if (syncCodeBlocks.length > 0) {
+		const renderedElements = new Map(syncCodeBlocks);
+		// eslint-disable-next-line no-restricted-syntax
+		const placeholderElements = outElement.querySelectorAll<HTMLDivElement>(`div[data-code]`);
+		for (const placeholderElement of placeholderElements) {
+			const renderedElement = renderedElements.get(placeholderElement.dataset['code'] ?? '');
+			if (renderedElement) {
+				DOM.reset(placeholderElement, renderedElement);
+			}
+		}
+	}
+
+	// Signal size changes for image tags
+	if (options.asyncRenderCallback) {
+		// eslint-disable-next-line no-restricted-syntax
+		for (const img of outElement.getElementsByTagName('img')) {
+			const listener = disposables.add(DOM.addDisposableListener(img, 'load', () => {
+				listener.dispose();
+				options.asyncRenderCallback!();
+			}));
+		}
+	}
+
+	// Add event listeners for links
 	if (options.actionHandler) {
-		options.actionHandler.disposeables.add(Event.any<MouseEvent>(domEvent(element, 'click'), domEvent(element, 'auxclick'))(e => {
-			const mouseEvent = new StandardMouseEvent(e);
+		const clickCb = (e: PointerEvent) => {
+			const mouseEvent = new StandardMouseEvent(DOM.getWindow(outElement), e);
 			if (!mouseEvent.leftButton && !mouseEvent.middleButton) {
 				return;
 			}
+			activateLink(markdown, options, mouseEvent);
+		};
+		disposables.add(DOM.addDisposableListener(outElement, 'click', clickCb));
+		disposables.add(DOM.addDisposableListener(outElement, 'auxclick', clickCb));
 
-			let target: HTMLElement | null = mouseEvent.target;
-			if (target.tagName !== 'A') {
-				target = target.parentElement;
-				if (!target || target.tagName !== 'A') {
-					return;
-				}
+		disposables.add(DOM.addDisposableListener(outElement, 'keydown', (e) => {
+			const keyboardEvent = new StandardKeyboardEvent(e);
+			if (!keyboardEvent.equals(KeyCode.Space) && !keyboardEvent.equals(KeyCode.Enter)) {
+				return;
 			}
-			try {
-				const href = target.dataset['href'];
-				if (href) {
-					options.actionHandler!.callback(href, mouseEvent);
-				}
-			} catch (err) {
-				onUnexpectedError(err);
-			} finally {
-				mouseEvent.preventDefault();
-			}
+			activateLink(markdown, options, keyboardEvent);
 		}));
 	}
 
-	// Use our own sanitizer so that we can let through only spans.
-	// Otherwise, we'd be letting all html be rendered.
-	// If we want to allow markdown permitted tags, then we can delete sanitizer and sanitize.
-	// We always pass the output through insane after this so that we don't rely on
-	// marked for sanitization.
-	markedOptions.sanitizer = (html: string): string => {
-		const match = markdown.isTrusted ? html.match(/^(<span[^<]+>)|(<\/\s*span>)$/) : undefined;
-		return match ? html : '';
-	};
-	markedOptions.sanitize = true;
-	markedOptions.silent = true;
-
-	markedOptions.renderer = renderer;
-
-	// values that are too long will freeze the UI
-	let value = markdown.value ?? '';
-	if (value.length > 100_000) {
-		value = `${value.substr(0, 100_000)}…`;
-	}
-	// escape theme icons
-	if (markdown.supportThemeIcons) {
-		value = markdownEscapeEscapedCodicons(value);
-	}
-
-	const renderedMarkdown = marked.parse(value, markedOptions);
-
-	// sanitize with insane
-	element.innerHTML = sanitizeRenderedMarkdown(markdown, renderedMarkdown);
-
-	// signal that async code blocks can be now be inserted
-	signalInnerHTML!();
-
-	return element;
-}
-
-function sanitizeRenderedMarkdown(
-	options: { isTrusted?: boolean },
-	renderedMarkdown: string,
-): string {
-	const insaneOptions = getInsaneOptions(options);
-	if (_ttpInsane) {
-		return _ttpInsane.createHTML(renderedMarkdown, insaneOptions) as unknown as string;
-	} else {
-		return insane(renderedMarkdown, insaneOptions);
-	}
-}
-
-function getInsaneOptions(options: { readonly isTrusted?: boolean }): InsaneOptions {
-	const allowedSchemes = [
-		Schemas.http,
-		Schemas.https,
-		Schemas.mailto,
-		Schemas.data,
-		Schemas.file,
-		Schemas.vscodeRemote,
-		Schemas.vscodeRemoteResource,
-	];
-
-	if (options.isTrusted) {
-		allowedSchemes.push(Schemas.command);
+	// Remove/disable inputs
+	// eslint-disable-next-line no-restricted-syntax
+	for (const input of [...outElement.getElementsByTagName('input')]) {
+		if (input.attributes.getNamedItem('type')?.value === 'checkbox') {
+			input.setAttribute('disabled', '');
+		} else {
+			if (options.sanitizerConfig?.replaceWithPlaintext) {
+				const replacement = convertTagToPlaintext(input);
+				if (replacement) {
+					input.parentElement?.replaceChild(replacement, input);
+				} else {
+					input.remove();
+				}
+			} else {
+				input.remove();
+			}
+		}
 	}
 
 	return {
-		allowedSchemes,
+		element: outElement,
+		dispose: () => {
+			isDisposed = true;
+			disposables.dispose();
+		}
+	};
+}
+
+function rewriteRenderedLinks(markdown: IMarkdownString, options: MarkdownRenderOptions, root: HTMLElement) {
+	// eslint-disable-next-line no-restricted-syntax
+	for (const el of root.querySelectorAll('img, audio, video, source')) {
+		const src = el.getAttribute('src'); // Get the raw 'src' attribute value as text, not the resolved 'src'
+		if (src) {
+			let href = src;
+			try {
+				if (markdown.baseUri) { // absolute or relative local path, or file: uri
+					href = resolveWithBaseUri(URI.from(markdown.baseUri), href);
+				}
+			} catch (err) { }
+
+			el.setAttribute('src', massageHref(markdown, href, true));
+
+			if (options.sanitizerConfig?.remoteImageIsAllowed) {
+				const uri = URI.parse(href);
+				if (uri.scheme !== Schemas.file && uri.scheme !== Schemas.data && !options.sanitizerConfig.remoteImageIsAllowed(uri)) {
+					el.replaceWith(DOM.$('', undefined, el.outerHTML));
+				}
+			}
+		}
+	}
+
+	// eslint-disable-next-line no-restricted-syntax
+	for (const el of root.querySelectorAll('a')) {
+		const href = el.getAttribute('href'); // Get the raw 'href' attribute value as text, not the resolved 'href'
+		el.setAttribute('href', ''); // Clear out href. We use the `data-href` for handling clicks instead
+		if (!href
+			|| /^data:|javascript:/i.test(href)
+			|| (/^command:/i.test(href) && !markdown.isTrusted)
+			|| /^command:(\/\/\/)?_workbench\.downloadResource/i.test(href)) {
+			// drop the link
+			el.replaceWith(...el.childNodes);
+		} else {
+			let resolvedHref = massageHref(markdown, href, false);
+			if (markdown.baseUri) {
+				resolvedHref = resolveWithBaseUri(URI.from(markdown.baseUri), href);
+			}
+			el.dataset.href = resolvedHref;
+		}
+	}
+}
+
+function createMarkdownRenderer(marked: marked.Marked, options: MarkdownRenderOptions, markdown: IMarkdownString): { renderer: marked.Renderer; codeBlocks: Promise<[string, HTMLElement]>[]; syncCodeBlocks: [string, HTMLElement][] } {
+	const renderer = new marked.Renderer(options.markedOptions);
+	renderer.image = defaultMarkedRenderers.image;
+	renderer.link = defaultMarkedRenderers.link;
+	renderer.paragraph = defaultMarkedRenderers.paragraph;
+
+	if (markdown.supportAlertSyntax) {
+		renderer.blockquote = createAlertBlockquoteRenderer(renderer.blockquote);
+	}
+
+	// Will collect [id, renderedElement] tuples
+	const codeBlocks: Promise<[string, HTMLElement]>[] = [];
+	const syncCodeBlocks: [string, HTMLElement][] = [];
+
+	if (options.codeBlockRendererSync) {
+		renderer.code = ({ text, lang, raw }: marked.Tokens.Code) => {
+			const id = defaultGenerator.nextId();
+			const value = options.codeBlockRendererSync!(postProcessCodeBlockLanguageId(lang), text, raw);
+			syncCodeBlocks.push([id, value]);
+			return `<div class="code" data-code="${id}">${escape(text)}</div>`;
+		};
+	} else if (options.codeBlockRenderer) {
+		renderer.code = ({ text, lang }: marked.Tokens.Code) => {
+			const id = defaultGenerator.nextId();
+			const value = options.codeBlockRenderer!(postProcessCodeBlockLanguageId(lang), text);
+			codeBlocks.push(value.then(element => [id, element]));
+			return `<div class="code" data-code="${id}">${escape(text)}</div>`;
+		};
+	}
+
+	if (!markdown.supportHtml) {
+		// Note: we always pass the output through dompurify after this so that we don't rely on
+		// marked for real sanitization.
+		renderer.html = ({ text }) => {
+			if (options.sanitizerConfig?.replaceWithPlaintext) {
+				return escape(text);
+			}
+
+			const match = markdown.isTrusted ? text.match(/^(<span[^>]+>)|(<\/\s*span>)$/) : undefined;
+			return match ? text : '';
+		};
+	}
+	return { renderer, codeBlocks, syncCodeBlocks };
+}
+
+function preprocessMarkdownString(markdown: IMarkdownString) {
+	let value = markdown.value;
+
+	// values that are too long will freeze the UI
+	if (value.length > 100_000) {
+		value = `${value.substr(0, 100_000)}…`;
+	}
+
+	// escape theme icons
+	if (markdown.supportThemeIcons) {
+		value = markdownEscapeEscapedIcons(value);
+	}
+
+	return value;
+}
+
+function activateLink(mdStr: IMarkdownString, options: MarkdownRenderOptions, event: StandardMouseEvent | StandardKeyboardEvent): void {
+	const target = event.target.closest('a[data-href]');
+	if (!DOM.isHTMLElement(target)) {
+		return;
+	}
+
+	try {
+		let href = target.dataset['href'];
+		if (href) {
+			if (mdStr.baseUri) {
+				href = resolveWithBaseUri(URI.from(mdStr.baseUri), href);
+			}
+			options.actionHandler?.(href, mdStr);
+		}
+	} catch (err) {
+		onUnexpectedError(err);
+	} finally {
+		event.preventDefault();
+		event.stopPropagation();
+	}
+}
+
+function uriMassage(markdown: IMarkdownString, part: string): string {
+	let data: unknown;
+	try {
+		data = parse(decodeURIComponent(part));
+	} catch (e) {
+		// ignore
+	}
+	if (!data) {
+		return part;
+	}
+	data = cloneAndChange(data, value => {
+		if (markdown.uris && markdown.uris[value]) {
+			return URI.revive(markdown.uris[value]);
+		} else {
+			return undefined;
+		}
+	});
+	return encodeURIComponent(JSON.stringify(data));
+}
+
+function massageHref(markdown: IMarkdownString, href: string, isDomUri: boolean): string {
+	const data = markdown.uris && markdown.uris[href];
+	let uri = URI.revive(data);
+	if (isDomUri) {
+		if (href.startsWith(Schemas.data + ':')) {
+			return href;
+		}
+		if (!uri) {
+			uri = URI.parse(href);
+		}
+		// this URI will end up as "src"-attribute of a dom node
+		// and because of that special rewriting needs to be done
+		// so that the URI uses a protocol that's understood by
+		// browsers (like http or https)
+		return FileAccess.uriToBrowserUri(uri).toString(true);
+	}
+	if (!uri) {
+		return href;
+	}
+	if (URI.parse(href).toString() === uri.toString()) {
+		return href; // no transformation performed
+	}
+	if (uri.query) {
+		uri = uri.with({ query: uriMassage(markdown, uri.query) });
+	}
+	return uri.toString();
+}
+
+function postProcessCodeBlockLanguageId(lang: string | undefined): string {
+	if (!lang) {
+		return '';
+	}
+
+	const parts = lang.split(/[\s+|:|,|\{|\?]/, 1);
+	if (parts.length) {
+		return parts[0];
+	}
+	return lang;
+}
+
+function resolveWithBaseUri(baseUri: URI, href: string): string {
+	const hasScheme = /^\w[\w\d+.-]*:/.test(href);
+	if (hasScheme) {
+		return href;
+	}
+
+	if (baseUri.path.endsWith('/')) {
+		return resolvePath(baseUri, href).toString();
+	} else {
+		return resolvePath(dirname(baseUri), href).toString();
+	}
+}
+
+type MdStrConfig = {
+	readonly isTrusted?: boolean | MarkdownStringTrustedOptions;
+	readonly baseUri?: UriComponents;
+};
+
+function sanitizeRenderedMarkdown(
+	renderedMarkdown: string,
+	originalMdStrConfig: MdStrConfig,
+	options: MarkdownSanitizerConfig = {},
+): TrustedHTML {
+	const sanitizerConfig = getDomSanitizerConfig(originalMdStrConfig, options);
+	return domSanitize.sanitizeHtml(renderedMarkdown, sanitizerConfig);
+}
+
+export const allowedMarkdownHtmlTags = Object.freeze([
+	...domSanitize.basicMarkupHtmlTags,
+	'input', // Allow inputs for rendering checkboxes. Other types of inputs are removed and the inputs are always disabled
+]);
+
+export const allowedMarkdownHtmlAttributes = Object.freeze<Array<string | domSanitize.SanitizeAttributeRule>>([
+	'align',
+	'autoplay',
+	'alt',
+	'colspan',
+	'controls',
+	'draggable',
+	'height',
+	'href',
+	'loop',
+	'muted',
+	'playsinline',
+	'poster',
+	'rowspan',
+	'src',
+	'target',
+	'title',
+	'type',
+	'width',
+	'start',
+
+	// Input (For disabled inputs)
+	'checked',
+	'disabled',
+	'value',
+
+	// Custom markdown attributes
+	'data-code',
+	'data-href',
+	'data-severity',
+
+	// Only allow very specific styles
+	{
+		attributeName: 'style',
+		shouldKeep: (element, data) => {
+			if (element.tagName === 'SPAN') {
+				if (data.attrName === 'style') {
+					return /^(color\:(#[0-9a-fA-F]+|var\(--vscode(-[a-zA-Z0-9]+)+\));)?(background-color\:(#[0-9a-fA-F]+|var\(--vscode(-[a-zA-Z0-9]+)+\));)?(border-radius:[0-9]+px;)?$/.test(data.attrValue);
+				}
+			}
+			return false;
+		}
+	},
+
+	// Only allow codicons for classes
+	{
+		attributeName: 'class',
+		shouldKeep: (element, data) => {
+			if (element.tagName === 'SPAN') {
+				if (data.attrName === 'class') {
+					return /^codicon codicon-[a-z\-]+( codicon-modifier-[a-z\-]+)?$/.test(data.attrValue);
+				}
+			}
+			return false;
+		},
+	},
+]);
+
+function getDomSanitizerConfig(mdStrConfig: MdStrConfig, options: MarkdownSanitizerConfig): domSanitize.DomSanitizerConfig {
+	const isTrusted = mdStrConfig.isTrusted ?? false;
+	const allowedLinkSchemes = [
+		Schemas.http,
+		Schemas.https,
+		Schemas.mailto,
+		Schemas.file,
+		Schemas.vscodeFileResource,
+		Schemas.vscodeRemote,
+		Schemas.vscodeRemoteResource,
+		Schemas.vscodeNotebookCell,
+		// For links that are handled entirely by the action handler
+		Schemas.internal,
+	];
+
+	if (isTrusted) {
+		allowedLinkSchemes.push(Schemas.command);
+	}
+
+	if (options.allowedLinkSchemes?.augment) {
+		allowedLinkSchemes.push(...options.allowedLinkSchemes.augment);
+	}
+
+	return {
 		// allowedTags should included everything that markdown renders to.
-		// Since we have our own sanitize function for marked, it's possible we missed some tag so let insane make sure.
+		// Since we have our own sanitize function for marked, it's possible we missed some tag so let dompurify make sure.
 		// HTML tags that can result from markdown are from reading https://spec.commonmark.org/0.29/
 		// HTML table tags that can result from markdown are from https://github.github.com/gfm/#tables-extension-
-		allowedTags: ['ul', 'li', 'p', 'code', 'blockquote', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'em', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'del', 'a', 'strong', 'br', 'img', 'span'],
-		allowedAttributes: {
-			'a': ['href', 'name', 'target', 'data-href'],
-			'img': ['src', 'title', 'alt', 'width', 'height'],
-			'div': ['class', 'data-code'],
-			'span': ['class', 'style'],
-			// https://github.com/microsoft/vscode/issues/95937
-			'th': ['align'],
-			'td': ['align']
+		allowedTags: {
+			override: options.allowedTags?.override ?? allowedMarkdownHtmlTags
 		},
-		filter(token: { tag: string; attrs: { readonly [key: string]: string; }; }): boolean {
-			if (token.tag === 'span' && options.isTrusted && (Object.keys(token.attrs).length === 1)) {
-				if (token.attrs['style']) {
-					return !!token.attrs['style'].match(/^(color\:#[0-9a-fA-F]+;)?(background-color\:#[0-9a-fA-F]+;)?$/);
-				} else if (token.attrs['class']) {
-					// The class should match codicon rendering in src\vs\base\common\codicons.ts
-					return !!token.attrs['class'].match(/^codicon codicon-[a-z\-]+( codicon-animation-[a-z\-]+)?$/);
-				}
-				return false;
-			}
-			return true;
-		}
+		allowedAttributes: {
+			override: options.allowedAttributes?.override ?? allowedMarkdownHtmlAttributes,
+		},
+		allowedLinkProtocols: {
+			override: allowedLinkSchemes,
+		},
+		allowRelativeLinkPaths: !!mdStrConfig.baseUri,
+		allowedMediaProtocols: {
+			override: [
+				Schemas.http,
+				Schemas.https,
+				Schemas.data,
+				Schemas.file,
+				Schemas.vscodeFileResource,
+				Schemas.vscodeRemote,
+				Schemas.vscodeRemoteResource,
+			]
+		},
+		allowRelativeMediaPaths: !!mdStrConfig.baseUri,
+		replaceWithPlaintext: options.replaceWithPlaintext,
 	};
 }
 
 /**
- * Strips all markdown from `markdown`. For example `# Header` would be output as `Header`.
+ * Renders `str` as plaintext, stripping out Markdown syntax if it's a {@link IMarkdownString}.
+ *
+ * For example `# Header` would be output as `Header`.
  */
-export function renderMarkdownAsPlaintext(markdown: IMarkdownString) {
+export function renderAsPlaintext(str: IMarkdownString | string, options?: {
+	/** Controls if the ``` of code blocks should be preserved in the output or not */
+	readonly includeCodeBlocksFences?: boolean;
+	/** Controls if we want to format empty links from "Link [](file)" to "Link file" */
+	readonly useLinkFormatter?: boolean;
+}) {
+	if (typeof str === 'string') {
+		return str;
+	}
+
+	// values that are too long will freeze the UI
+	let value = str.value ?? '';
+	if (value.length > 100_000) {
+		value = `${value.substr(0, 100_000)}…`;
+	}
+
+	const renderer = createPlainTextRenderer();
+	if (options?.includeCodeBlocksFences) {
+		renderer.code = codeBlockFences;
+	}
+	if (options?.useLinkFormatter) {
+		renderer.link = linkFormatter;
+	}
+
+	const html = marked.parse(value, { async: false, renderer });
+	return sanitizeRenderedMarkdown(html, { isTrusted: false }, {})
+		.toString()
+		.replace(/&(#\d+|[a-zA-Z]+);/g, m => unescapeInfo.get(m) ?? m)
+		.trim();
+}
+
+const unescapeInfo = new Map<string, string>([
+	['&quot;', '"'],
+	['&nbsp;', ' '],
+	['&amp;', '&'],
+	['&#39;', '\''],
+	['&lt;', '<'],
+	['&gt;', '>'],
+]);
+
+function createPlainTextRenderer(): marked.Renderer {
 	const renderer = new marked.Renderer();
 
-	renderer.code = (code: string): string => {
-		return code;
+	renderer.code = ({ text }: marked.Tokens.Code): string => {
+		return escape(text);
 	};
-	renderer.blockquote = (quote: string): string => {
-		return quote;
+	renderer.blockquote = ({ text }: marked.Tokens.Blockquote): string => {
+		return text + '\n';
 	};
-	renderer.html = (_html: string): string => {
+	renderer.html = (_: marked.Tokens.HTML): string => {
 		return '';
 	};
-	renderer.heading = (text: string, _level: 1 | 2 | 3 | 4 | 5 | 6, _raw: string): string => {
-		return text + '\n';
+	renderer.heading = function ({ tokens }: marked.Tokens.Heading): string {
+		return this.parser.parseInline(tokens) + '\n';
 	};
 	renderer.hr = (): string => {
 		return '';
 	};
-	renderer.list = (body: string, _ordered: boolean): string => {
-		return body;
+	renderer.list = function ({ items }: marked.Tokens.List): string {
+		return items.map(x => this.listitem(x)).join('\n') + '\n';
 	};
-	renderer.listitem = (text: string): string => {
+	renderer.listitem = ({ text }: marked.Tokens.ListItem): string => {
 		return text + '\n';
 	};
-	renderer.paragraph = (text: string): string => {
-		return text + '\n';
+	renderer.paragraph = function ({ tokens }: marked.Tokens.Paragraph): string {
+		return this.parser.parseInline(tokens) + '\n';
 	};
-	renderer.table = (header: string, body: string): string => {
-		return header + body + '\n';
+	renderer.table = function ({ header, rows }: marked.Tokens.Table): string {
+		return header.map(cell => this.tablecell(cell)).join(' ') + '\n' + rows.map(cells => cells.map(cell => this.tablecell(cell)).join(' ')).join('\n') + '\n';
 	};
-	renderer.tablerow = (content: string): string => {
-		return content;
-	};
-	renderer.tablecell = (content: string, _flags: {
-		header: boolean;
-		align: 'center' | 'left' | 'right' | null;
-	}): string => {
-		return content + ' ';
-	};
-	renderer.strong = (text: string): string => {
+	renderer.tablerow = ({ text }: marked.Tokens.TableRow): string => {
 		return text;
 	};
-	renderer.em = (text: string): string => {
+	renderer.tablecell = function ({ tokens }: marked.Tokens.TableCell): string {
+		return this.parser.parseInline(tokens);
+	};
+	renderer.strong = ({ text }: marked.Tokens.Strong): string => {
 		return text;
 	};
-	renderer.codespan = (code: string): string => {
-		return code;
+	renderer.em = ({ text }: marked.Tokens.Em): string => {
+		return text;
 	};
-	renderer.br = (): string => {
+	renderer.codespan = ({ text }: marked.Tokens.Codespan): string => {
+		return escape(text);
+	};
+	renderer.br = (_: marked.Tokens.Br): string => {
 		return '\n';
 	};
-	renderer.del = (text: string): string => {
+	renderer.del = ({ text }: marked.Tokens.Del): string => {
 		return text;
 	};
-	renderer.image = (_href: string, _title: string, _text: string): string => {
+	renderer.image = (_: marked.Tokens.Image): string => {
 		return '';
 	};
-	renderer.text = (text: string): string => {
+	renderer.text = ({ text }: marked.Tokens.Text): string => {
 		return text;
 	};
-	renderer.link = (_href: string, _title: string, text: string): string => {
+	renderer.link = ({ text }: marked.Tokens.Link): string => {
 		return text;
 	};
-	// values that are too long will freeze the UI
-	let value = markdown.value ?? '';
-	if (value.length > 100_000) {
-		value = `${value.substr(0, 100_000)}…`;
+	return renderer;
+}
+
+const codeBlockFences = ({ text }: marked.Tokens.Code): string => {
+	return `\n\`\`\`\n${escape(text)}\n\`\`\`\n`;
+};
+
+const linkFormatter = ({ text, href }: marked.Tokens.Link): string => {
+	try {
+		if (href) {
+			const uri = URI.parse(href);
+			return text.trim() || basename(uri);
+		}
+	} catch (e) {
+		return text.trim() || pathBasename(href);
 	}
-	return sanitizeRenderedMarkdown({ isTrusted: false }, marked.parse(value, { renderer })).toString();
+	return text;
+};
+
+function mergeRawTokenText(tokens: marked.Token[]): string {
+	let mergedTokenText = '';
+	tokens.forEach(token => {
+		mergedTokenText += token.raw;
+	});
+	return mergedTokenText;
+}
+
+function completeSingleLinePattern(token: marked.Tokens.Text | marked.Tokens.Paragraph): marked.Token | undefined {
+	if (!token.tokens) {
+		return undefined;
+	}
+
+	for (let i = token.tokens.length - 1; i >= 0; i--) {
+		const subtoken = token.tokens[i];
+		if (subtoken.type === 'text') {
+			const lines = subtoken.raw.split('\n');
+			const lastLine = lines[lines.length - 1];
+			if (lastLine.includes('`')) {
+				return completeCodespan(token);
+			}
+
+			else if (lastLine.includes('**')) {
+				return completeDoublestar(token);
+			}
+
+			else if (lastLine.match(/\*\w/)) {
+				return completeStar(token);
+			}
+
+			else if (lastLine.match(/(^|\s)__\w/)) {
+				return completeDoubleUnderscore(token);
+			}
+
+			else if (lastLine.match(/(^|\s)_\w/)) {
+				return completeUnderscore(token);
+			}
+
+			else if (
+				// Text with start of link target
+				hasLinkTextAndStartOfLinkTarget(lastLine) ||
+				// This token doesn't have the link text, eg if it contains other markdown constructs that are in other subtokens.
+				// But some preceding token does have an unbalanced [ at least
+				hasStartOfLinkTargetAndNoLinkText(lastLine) && token.tokens.slice(0, i).some(t => t.type === 'text' && t.raw.match(/\[[^\]]*$/))
+			) {
+				const nextTwoSubTokens = token.tokens.slice(i + 1);
+
+				// A markdown link can look like
+				// [link text](https://microsoft.com "more text")
+				// Where "more text" is a title for the link or an argument to a vscode command link
+				if (
+					// If the link was parsed as a link, then look for a link token and a text token with a quote
+					nextTwoSubTokens[0]?.type === 'link' && nextTwoSubTokens[1]?.type === 'text' && nextTwoSubTokens[1].raw.match(/^ *"[^"]*$/) ||
+					// And if the link was not parsed as a link (eg command link), just look for a single quote in this token
+					lastLine.match(/^[^"]* +"[^"]*$/)
+				) {
+
+					return completeLinkTargetArg(token);
+				}
+				return completeLinkTarget(token);
+			}
+
+			// Contains the start of link text, and no following tokens contain the link target
+			else if (lastLine.match(/(^|\s)\[\w*[^\]]*$/)) {
+				return completeLinkText(token);
+			}
+		}
+	}
+
+	return undefined;
+}
+
+function hasLinkTextAndStartOfLinkTarget(str: string): boolean {
+	return !!str.match(/(^|\s)\[.*\]\(\w*/);
+}
+
+function hasStartOfLinkTargetAndNoLinkText(str: string): boolean {
+	return !!str.match(/^[^\[]*\]\([^\)]*$/);
+}
+
+function completeListItemPattern(list: marked.Tokens.List): marked.Tokens.List | undefined {
+	// Patch up this one list item
+	const lastListItem = list.items[list.items.length - 1];
+	const lastListSubToken = lastListItem.tokens ? lastListItem.tokens[lastListItem.tokens.length - 1] : undefined;
+
+	/*
+	Example list token structures:
+
+	list
+		list_item
+			text
+				text
+				codespan
+				link
+		list_item
+			text
+			code // Complete indented codeblock
+		list_item
+			text
+			space
+			text
+				text // Incomplete indented codeblock
+		list_item
+			text
+			list // Nested list
+				list_item
+					text
+						text
+
+	Contrast with paragraph:
+	paragraph
+		text
+		codespan
+	*/
+
+	const listEndsInHeading = (list: marked.Tokens.List): boolean => {
+		// A list item can be rendered as a heading for some reason when it has a subitem where we haven't rendered the text yet like this:
+		// 1. list item
+		//    -
+		const lastItem = list.items.at(-1);
+		const lastToken = lastItem?.tokens.at(-1);
+		return lastToken?.type === 'heading' || lastToken?.type === 'list' && listEndsInHeading(lastToken as marked.Tokens.List);
+	};
+
+	let newToken: marked.Token | undefined;
+	if (lastListSubToken?.type === 'text' && !('inRawBlock' in lastListItem)) { // Why does Tag have a type of 'text'
+		newToken = completeSingleLinePattern(lastListSubToken as marked.Tokens.Text);
+	} else if (listEndsInHeading(list)) {
+		const newList = marked.lexer(list.raw.trim() + ' &nbsp;')[0] as marked.Tokens.List;
+		if (newList.type !== 'list') {
+			// Something went wrong
+			return;
+		}
+		return newList;
+	}
+
+	if (!newToken || newToken.type !== 'paragraph') { // 'text' item inside the list item turns into paragraph
+		// Nothing to fix, or not a pattern we were expecting
+		return;
+	}
+
+	const previousListItemsText = mergeRawTokenText(list.items.slice(0, -1));
+
+	// Grabbing the `- ` or `1. ` or `* ` off the list item because I can't find a better way to do this
+	const lastListItemLead = lastListItem.raw.match(/^(\s*(-|\d+\.|\*) +)/)?.[0];
+	if (!lastListItemLead) {
+		// Is badly formatted
+		return;
+	}
+
+	const newListItemText = lastListItemLead +
+		mergeRawTokenText(lastListItem.tokens.slice(0, -1)) +
+		newToken.raw;
+
+	const newList = marked.lexer(previousListItemsText + newListItemText)[0] as marked.Tokens.List;
+	if (newList.type !== 'list') {
+		// Something went wrong
+		return;
+	}
+
+	return newList;
+}
+
+function completeHeading(token: marked.Tokens.Heading, fullRawText: string): marked.TokensList | void {
+	if (token.raw.match(/-\s*$/)) {
+		return marked.lexer(fullRawText + ' &nbsp;');
+	}
+}
+
+const maxIncompleteTokensFixRounds = 3;
+export function fillInIncompleteTokens(tokens: marked.TokensList): marked.TokensList {
+	for (let i = 0; i < maxIncompleteTokensFixRounds; i++) {
+		const newTokens = fillInIncompleteTokensOnce(tokens);
+		if (newTokens) {
+			tokens = newTokens;
+		} else {
+			break;
+		}
+	}
+
+	return tokens;
+}
+
+function fillInIncompleteTokensOnce(tokens: marked.TokensList): marked.TokensList | null {
+	let i: number;
+	let newTokens: marked.Token[] | undefined;
+	for (i = 0; i < tokens.length; i++) {
+		const token = tokens[i];
+
+		if (token.type === 'paragraph' && token.raw.match(/(\n|^)\|/)) {
+			newTokens = completeTable(tokens.slice(i));
+			break;
+		}
+	}
+
+	// Find the last "interesting" token, skipping trailing `space` and `html`
+	// tokens. Callers like the chat content renderer wrap markdown in
+	// `<body>...</body>` (so dompurify keeps leading comments), which leaves
+	// `</body>` as the literal last token — without this skip, the
+	// paragraph / list fixups never fire for that content.
+	let lastInterestingIdx = tokens.length - 1;
+	while (lastInterestingIdx >= 0 && (tokens[lastInterestingIdx].type === 'space' || tokens[lastInterestingIdx].type === 'html')) {
+		lastInterestingIdx--;
+	}
+	const lastInterestingToken = lastInterestingIdx >= 0 ? tokens[lastInterestingIdx] : undefined;
+	const trailingTokens = tokens.slice(lastInterestingIdx + 1);
+
+	if (!newTokens && lastInterestingToken?.type === 'list') {
+		const newListToken = completeListItemPattern(lastInterestingToken as marked.Tokens.List);
+		if (newListToken) {
+			newTokens = [newListToken, ...trailingTokens];
+			i = lastInterestingIdx;
+		}
+	}
+
+	if (!newTokens && lastInterestingToken?.type === 'paragraph') {
+		// Only operates on a single token, because any newline that follows this should break these patterns
+		const newToken = completeSingleLinePattern(lastInterestingToken as marked.Tokens.Paragraph);
+		if (newToken) {
+			newTokens = [newToken, ...trailingTokens];
+			i = lastInterestingIdx;
+		}
+	}
+
+	if (newTokens) {
+		const newTokensList = [
+			...tokens.slice(0, i),
+			...newTokens
+		];
+		(newTokensList as marked.TokensList).links = tokens.links;
+		return newTokensList as marked.TokensList;
+	}
+
+	const lastToken = tokens.at(-1);
+	if (lastToken?.type === 'heading') {
+		const completeTokens = completeHeading(lastToken as marked.Tokens.Heading, mergeRawTokenText(tokens));
+		if (completeTokens) {
+			return completeTokens;
+		}
+	}
+
+	return null;
+}
+
+
+function completeCodespan(token: marked.Token): marked.Token {
+	return completeWithString(token, '`');
+}
+
+function completeStar(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, '*');
+}
+
+function completeUnderscore(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, '_');
+}
+
+function completeLinkTarget(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, ')', false);
+}
+
+function completeLinkTargetArg(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, '")', false);
+}
+
+function completeLinkText(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, '](https://microsoft.com)', false);
+}
+
+function completeDoublestar(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, '**');
+}
+
+function completeDoubleUnderscore(tokens: marked.Token): marked.Token {
+	return completeWithString(tokens, '__');
+}
+
+function completeWithString(tokens: marked.Token[] | marked.Token, closingString: string, shouldTrim = true): marked.Token {
+	const mergedRawText = mergeRawTokenText(Array.isArray(tokens) ? tokens : [tokens]);
+
+	// If it was completed correctly, this should be a single token.
+	// Expecting either a Paragraph or a List
+	const trimmedRawText = shouldTrim ? mergedRawText.trimEnd() : mergedRawText;
+	return marked.lexer(trimmedRawText + closingString)[0];
+}
+
+function completeTable(tokens: marked.Token[]): marked.Token[] | undefined {
+	const mergedRawText = mergeRawTokenText(tokens);
+	const lines = mergedRawText.split('\n');
+
+	let numCols: number | undefined; // The number of line1 col headers
+	let hasSeparatorRow = false;
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i].trim();
+		if (typeof numCols === 'undefined' && line.match(/^\s*\|/)) {
+			const line1Matches = line.match(/(\|[^\|]+)(?=\||$)/g);
+			if (line1Matches) {
+				numCols = line1Matches.length;
+			}
+		} else if (typeof numCols === 'number') {
+			if (line.match(/^\s*\|/)) {
+				if (i !== lines.length - 1) {
+					// We got the line1 header row, and the line2 separator row, but there are more lines, and it wasn't parsed as a table!
+					// That's strange and means that the table is probably malformed in the source, so I won't try to patch it up.
+					return undefined;
+				}
+
+				// Got a line2 separator row- partial or complete, doesn't matter, we'll replace it with a correct one
+				hasSeparatorRow = true;
+			} else {
+				// The line after the header row isn't a valid separator row, so the table is malformed, don't fix it up
+				return undefined;
+			}
+		}
+	}
+
+	if (typeof numCols === 'number' && numCols > 0) {
+		const prefixText = hasSeparatorRow ? lines.slice(0, -1).join('\n') : mergedRawText;
+		const line1EndsInPipe = !!prefixText.match(/\|\s*$/);
+		const newRawText = prefixText + (line1EndsInPipe ? '' : '|') + `\n|${' --- |'.repeat(numCols)}`;
+		return marked.lexer(newRawText);
+	}
+
+	return undefined;
 }

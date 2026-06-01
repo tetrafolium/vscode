@@ -1,9 +1,17 @@
 {
-	"extends": "../shared.tsconfig.json",
+	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
-		"outDir": "./out"
+		"rootDir": "./src",
+		"outDir": "./out",
+		"types": [
+			"node"
+		],
+		"typeRoots": [
+			"./node_modules/@types"
+		]
 	},
 	"include": [
-		"src/**/*"
+		"src/**/*",
+		"../../src/vscode-dts/vscode.d.ts"
 	]
 }

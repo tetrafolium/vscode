@@ -1,17 +1,17 @@
 {
-	"extends": "../shared.tsconfig.json",
+	"extends": "../tsconfig.base.json",
 	"compilerOptions": {
+		"rootDir": "./src",
 		"outDir": "./out",
-		"experimentalDecorators": true,
-		"lib": [
-			"es6",
-			"es2015.promise",
-			"es2019.array",
-			"es2020.string",
-			"dom"
-		]
+		"typeRoots": [
+			"./node_modules/@types"
+		],
+		"skipLibCheck": true
 	},
 	"include": [
-		"src/**/*"
+		"src/**/*",
+		"../../src/vscode-dts/vscode.d.ts",
+		"../../src/vscode-dts/vscode.proposed.customEditorDiffs.d.ts",
+		"../../src/vscode-dts/vscode.proposed.documentDiff.d.ts"
 	]
 }

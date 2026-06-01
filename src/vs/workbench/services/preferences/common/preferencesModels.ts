@@ -3,31 +3,40 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { flatten, tail, coalesce } from 'vs/base/common/arrays';
-import { IStringDictionary } from 'vs/base/common/collections';
-import { Emitter, Event } from 'vs/base/common/event';
-import { JSONVisitor, visit } from 'vs/base/common/json';
-import { Disposable, IReference } from 'vs/base/common/lifecycle';
-import { URI } from 'vs/base/common/uri';
-import { IRange, Range } from 'vs/editor/common/core/range';
-import { Selection } from 'vs/editor/common/core/selection';
-import { IIdentifiedSingleEditOperation, ITextModel } from 'vs/editor/common/model';
-import { ITextEditorModel } from 'vs/editor/common/services/resolverService';
-import * as nls from 'vs/nls';
-import { ConfigurationTarget, IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { ConfigurationScope, Extensions, IConfigurationNode, IConfigurationPropertySchema, IConfigurationRegistry, OVERRIDE_PROPERTY_PATTERN, IConfigurationExtensionInfo } from 'vs/platform/configuration/common/configurationRegistry';
-import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
-import { Registry } from 'vs/platform/registry/common/platform';
-import { EditorModel } from 'vs/workbench/common/editor';
-import { IFilterMetadata, IFilterResult, IGroupFilter, IKeybindingsEditorModel, ISearchResultGroup, ISetting, ISettingMatch, ISettingMatcher, ISettingsEditorModel, ISettingsGroup } from 'vs/workbench/services/preferences/common/preferences';
-import { withNullAsUndefined, isArray } from 'vs/base/common/types';
-import { FOLDER_SCOPES, WORKSPACE_SCOPES } from 'vs/workbench/services/configuration/common/configuration';
-import { createValidator } from 'vs/workbench/services/preferences/common/preferencesValidation';
+import { coalesce } from '../../../../base/common/arrays.js';
+import { IStringDictionary } from '../../../../base/common/collections.js';
+import { Emitter, Event } from '../../../../base/common/event.js';
+import { JSONVisitor, visit } from '../../../../base/common/json.js';
+import { Disposable, IReference } from '../../../../base/common/lifecycle.js';
+import { URI } from '../../../../base/common/uri.js';
+import { IRange, Range } from '../../../../editor/common/core/range.js';
+import { Selection } from '../../../../editor/common/core/selection.js';
+import { ITextModel } from '../../../../editor/common/model.js';
+import { ISingleEditOperation } from '../../../../editor/common/core/editOperation.js';
+import { ITextEditorModel } from '../../../../editor/common/services/resolverService.js';
+import * as nls from '../../../../nls.js';
+import { ConfigurationTarget, IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { ConfigurationDefaultValueSource, ConfigurationScope, Extensions, IConfigurationNode, IConfigurationRegistry, IRegisteredConfigurationPropertySchema, OVERRIDE_PROPERTY_REGEX } from '../../../../platform/configuration/common/configurationRegistry.js';
+import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
+import { Registry } from '../../../../platform/registry/common/platform.js';
+import { EditorModel } from '../../../common/editor/editorModel.js';
+import { IFilterMetadata, IFilterResult, IGroupFilter, IKeybindingsEditorModel, ISearchResultGroup, ISetting, ISettingMatch, ISettingMatcher, ISettingsEditorModel, ISettingsGroup, SettingMatchType } from './preferences.js';
+import { FOLDER_SCOPES, WORKSPACE_SCOPES } from '../../configuration/common/configuration.js';
+import { createValidator } from './preferencesValidation.js';
+import { isString } from '../../../../base/common/types.js';
 
 export const nullRange: IRange = { startLineNumber: -1, startColumn: -1, endLineNumber: -1, endColumn: -1 };
-export function isNullRange(range: IRange): boolean { return range.startLineNumber === -1 && range.startColumn === -1 && range.endLineNumber === -1 && range.endColumn === -1; }
+function isNullRange(range: IRange): boolean { return range.startLineNumber === -1 && range.startColumn === -1 && range.endLineNumber === -1 && range.endColumn === -1; }
 
-export abstract class AbstractSettingsModel extends EditorModel {
+/**
+ * Strips VS Code's custom `#settingId#` link syntax from a markdown string so the setting key
+ * remains as inline code (e.g. `` `settingId` ``). Useful for contexts that don't render markdown links.
+ */
+export function fixSettingLinks(text: string): string {
+	return text.replace(/`#([^#`]*)#`/g, (_, settingName) => `\`${settingName}\``);
+}
+
+abstract class AbstractSettingsModel extends EditorModel {
 
 	protected _currentResultGroups = new Map<string, ISearchResultGroup>();
 
@@ -70,14 +79,16 @@ export abstract class AbstractSettingsModel extends EditorModel {
 						filterMatches.push({
 							setting,
 							matches: settingMatchResult && settingMatchResult.matches,
-							score: settingMatchResult ? settingMatchResult.score : 0
+							matchType: settingMatchResult?.matchType ?? SettingMatchType.None,
+							keyMatchScore: settingMatchResult?.keyMatchScore ?? 0,
+							score: settingMatchResult?.score ?? 0
 						});
 					}
 				}
 			}
 		}
 
-		return filterMatches.sort((a, b) => b.score - a.score);
+		return filterMatches;
 	}
 
 	getPreference(key: string): ISetting | undefined {
@@ -94,7 +105,7 @@ export abstract class AbstractSettingsModel extends EditorModel {
 		return undefined;
 	}
 
-	protected collectMetadata(groups: ISearchResultGroup[]): IStringDictionary<IFilterMetadata> {
+	protected collectMetadata(groups: ISearchResultGroup[]): IStringDictionary<IFilterMetadata> | null {
 		const metadata = Object.create(null);
 		let hasMetadata = false;
 		groups.forEach(g => {
@@ -114,8 +125,6 @@ export abstract class AbstractSettingsModel extends EditorModel {
 
 	abstract settingsGroups: ISettingsGroup[];
 
-	abstract findValueMatches(filter: string, setting: ISetting): IRange[];
-
 	protected abstract update(): IFilterResult | undefined;
 }
 
@@ -130,7 +139,7 @@ export class SettingsEditorModel extends AbstractSettingsModel implements ISetti
 	constructor(reference: IReference<ITextEditorModel>, private _configurationTarget: ConfigurationTarget) {
 		super();
 		this.settingsModel = reference.object.textEditorModel!;
-		this._register(this.onDispose(() => reference.dispose()));
+		this._register(this.onWillDispose(() => reference.dispose()));
 		this._register(this.settingsModel.onDidChangeContent(() => {
 			this._settingsGroups = undefined;
 			this._onDidChangeGroups.fire();
@@ -154,10 +163,6 @@ export class SettingsEditorModel extends AbstractSettingsModel implements ISetti
 
 	get content(): string {
 		return this.settingsModel.getValue();
-	}
-
-	findValueMatches(filter: string, setting: ISetting): IRange[] {
-		return this.settingsModel.findMatches(filter, setting.valueRange, false, false, null, false).map(match => match.range);
 	}
 
 	protected isSettingsProperty(property: string, previousParents: string[]): boolean {
@@ -197,6 +202,7 @@ export class SettingsEditorModel extends AbstractSettingsModel implements ISetti
 				}],
 				title: modelGroup.title,
 				titleRange: modelGroup.titleRange,
+				order: modelGroup.order,
 				extensionInfo: modelGroup.extensionInfo
 			};
 		}
@@ -206,7 +212,7 @@ export class SettingsEditorModel extends AbstractSettingsModel implements ISetti
 			allGroups: this.settingsGroups,
 			filteredGroups: filteredGroup ? [filteredGroup] : [],
 			matches,
-			metadata
+			metadata: metadata ?? undefined
 		};
 	}
 }
@@ -215,6 +221,7 @@ export class Settings2EditorModel extends AbstractSettingsModel implements ISett
 	private readonly _onDidChangeGroups: Emitter<void> = this._register(new Emitter<void>());
 	readonly onDidChangeGroups: Event<void> = this._onDidChangeGroups.event;
 
+	private additionalGroups: ISettingsGroup[] = [];
 	private dirty = false;
 
 	constructor(
@@ -235,20 +242,20 @@ export class Settings2EditorModel extends AbstractSettingsModel implements ISett
 		}));
 	}
 
-	protected get filterGroups(): ISettingsGroup[] {
-		// Don't filter "commonly used"
+	/** Doesn't include the "Commonly Used" group */
+	protected override get filterGroups(): ISettingsGroup[] {
 		return this.settingsGroups.slice(1);
 	}
 
 	get settingsGroups(): ISettingsGroup[] {
 		const groups = this._defaultSettings.getSettingsGroups(this.dirty);
 		this.dirty = false;
-		return groups;
+		return [...groups, ...this.additionalGroups];
 	}
 
-	findValueMatches(filter: string, setting: ISetting): IRange[] {
-		// TODO @roblou
-		return [];
+	/** For programmatically added groups outside of registered configurations */
+	setAdditionalGroups(groups: ISettingsGroup[]) {
+		this.additionalGroups = groups;
 	}
 
 	protected update(): IFilterResult {
@@ -337,11 +344,11 @@ function parse(model: ITextModel, isSettingsProperty: (currentProperty: string, 
 					valueRange: nullRange,
 					descriptionRanges: [],
 					overrides: [],
-					overrideOf: withNullAsUndefined(overrideSetting)
+					overrideOf: overrideSetting ?? undefined,
 				};
 				if (previousParents.length === settingsPropertyIndex + 1) {
 					settings.push(setting);
-					if (OVERRIDE_PROPERTY_PATTERN.test(name)) {
+					if (OVERRIDE_PROPERTY_REGEX.test(name)) {
 						overrideSetting = setting;
 					}
 				} else {
@@ -414,7 +421,8 @@ function parse(model: ITextModel, isSettingsProperty: (currentProperty: string, 
 	if (!model.isDisposed()) {
 		visit(model.getValue(), visitor);
 	}
-	return settings.length > 0 ? [<ISettingsGroup>{
+	return settings.length > 0 ? [{
+		id: model.isDisposed() ? '' : model.id,
 		sections: [
 			{
 				settings
@@ -423,7 +431,7 @@ function parse(model: ITextModel, isSettingsProperty: (currentProperty: string, 
 		title: '',
 		titleRange: nullRange,
 		range
-	}] : [];
+	} satisfies ISettingsGroup] : [];
 }
 
 export class WorkspaceConfigurationEditorModel extends SettingsEditorModel {
@@ -434,12 +442,12 @@ export class WorkspaceConfigurationEditorModel extends SettingsEditorModel {
 		return this._configurationGroups;
 	}
 
-	protected parse(): void {
+	protected override parse(): void {
 		super.parse();
 		this._configurationGroups = parse(this.settingsModel, (property: string, previousParents: string[]): boolean => previousParents.length === 0);
 	}
 
-	protected isSettingsProperty(property: string, previousParents: string[]): boolean {
+	protected override isSettingsProperty(property: string, previousParents: string[]): boolean {
 		return property === 'settings' && previousParents.length === 1;
 	}
 
@@ -449,16 +457,24 @@ export class DefaultSettings extends Disposable {
 
 	private _allSettingsGroups: ISettingsGroup[] | undefined;
 	private _content: string | undefined;
+	private _contentWithoutMostCommonlyUsed: string | undefined;
 	private _settingsByName = new Map<string, ISetting>();
 
-	readonly _onDidChange: Emitter<void> = this._register(new Emitter<void>());
+	private readonly _onDidChange: Emitter<void> = this._register(new Emitter<void>());
 	readonly onDidChange: Event<void> = this._onDidChange.event;
 
 	constructor(
 		private _mostCommonlyUsedSettingsKeys: string[],
 		readonly target: ConfigurationTarget,
+		readonly configurationService: IConfigurationService
 	) {
 		super();
+		this._register(configurationService.onDidChangeConfiguration(e => {
+			if (e.source === ConfigurationTarget.DEFAULT) {
+				this.reset();
+				this._onDidChange.fire();
+			}
+		}));
 	}
 
 	getContent(forceUpdate = false): string {
@@ -467,6 +483,14 @@ export class DefaultSettings extends Disposable {
 		}
 
 		return this._content!;
+	}
+
+	getContentWithoutMostCommonlyUsed(forceUpdate = false): string {
+		if (!this._contentWithoutMostCommonlyUsed || forceUpdate) {
+			this.initialize();
+		}
+
+		return this._contentWithoutMostCommonlyUsed!;
 	}
 
 	getSettingsGroups(forceUpdate = false): ISettingsGroup[] {
@@ -479,21 +503,36 @@ export class DefaultSettings extends Disposable {
 
 	private initialize(): void {
 		this._allSettingsGroups = this.parse();
-		this._content = this.toContent(this._allSettingsGroups);
+		this._content = this.toContent(this._allSettingsGroups, 0);
+		this._contentWithoutMostCommonlyUsed = this.toContent(this._allSettingsGroups, 1);
+	}
+
+	private reset(): void {
+		this._content = undefined;
+		this._contentWithoutMostCommonlyUsed = undefined;
+		this._allSettingsGroups = undefined;
 	}
 
 	private parse(): ISettingsGroup[] {
 		const settingsGroups = this.getRegisteredGroups();
 		this.initAllSettingsMap(settingsGroups);
-		const mostCommonlyUsed = this.getMostCommonlyUsedSettings(settingsGroups);
+		const mostCommonlyUsed = this.getMostCommonlyUsedSettings();
 		return [mostCommonlyUsed, ...settingsGroups];
 	}
 
 	getRegisteredGroups(): ISettingsGroup[] {
-		const configurations = Registry.as<IConfigurationRegistry>(Extensions.Configuration).getConfigurations().slice();
-		const groups = this.removeEmptySettingsGroups(configurations.sort(this.compareConfigurationNodes)
-			.reduce<ISettingsGroup[]>((result, config, index, array) => this.parseConfig(config, result, array), []));
+		const registry = Registry.as<IConfigurationRegistry>(Extensions.Configuration);
+		const allConfigurations: IStringDictionary<IRegisteredConfigurationPropertySchema> = { ...registry.getConfigurationProperties() };
+		const excludedConfigurations = registry.getExcludedConfigurationProperties();
 
+		for (const policyKey of this.configurationService.keys().policy ?? []) {
+			const policyConfiguration = excludedConfigurations[policyKey];
+			if (policyConfiguration) {
+				allConfigurations[policyKey] = policyConfiguration;
+			}
+		}
+
+		const groups = this.removeEmptySettingsGroups(this.parseProperties(allConfigurations).sort(this.compareGroups));
 		return this.sortGroups(groups);
 	}
 
@@ -518,11 +557,11 @@ export class DefaultSettings extends Disposable {
 		}
 	}
 
-	private getMostCommonlyUsedSettings(allSettingsGroups: ISettingsGroup[]): ISettingsGroup {
+	private getMostCommonlyUsedSettings(): ISettingsGroup {
 		const settings = coalesce(this._mostCommonlyUsedSettingsKeys.map(key => {
 			const setting = this._settingsByName.get(key);
 			if (setting) {
-				return <ISetting>{
+				return {
 					description: setting.description,
 					key: setting.key,
 					value: setting.value,
@@ -535,12 +574,12 @@ export class DefaultSettings extends Disposable {
 					enum: setting.enum,
 					enumDescriptions: setting.enumDescriptions,
 					descriptionRanges: []
-				};
+				} satisfies ISetting;
 			}
 			return null;
 		}));
 
-		return <ISettingsGroup>{
+		return {
 			id: 'mostCommonlyUsed',
 			range: nullRange,
 			title: nls.localize('commonlyUsed', "Commonly Used"),
@@ -550,47 +589,70 @@ export class DefaultSettings extends Disposable {
 					settings
 				}
 			]
-		};
+		} satisfies ISettingsGroup;
 	}
 
-	private parseConfig(config: IConfigurationNode, result: ISettingsGroup[], configurations: IConfigurationNode[], settingsGroup?: ISettingsGroup, seenSettings?: { [key: string]: boolean }): ISettingsGroup[] {
-		seenSettings = seenSettings ? seenSettings : {};
-		let title = config.title;
-		if (!title) {
-			const configWithTitleAndSameId = configurations.find(c => (c.id === config.id) && c.title);
-			if (configWithTitleAndSameId) {
-				title = configWithTitleAndSameId.title;
+	private parseProperties(properties: IStringDictionary<IRegisteredConfigurationPropertySchema>): ISettingsGroup[] {
+		const result: ISettingsGroup[] = [];
+		const byTitle = new Map<string, ISettingsGroup[]>();
+		const byId = new Map<string, ISettingsGroup[]>();
+		for (const [key, property] of Object.entries(properties)) {
+			if (!property.section) {
+				continue;
 			}
-		}
-		if (title) {
-			if (!settingsGroup) {
-				settingsGroup = result.find(g => g.title === title && g.extensionInfo?.id === config.extensionInfo?.id);
-				if (!settingsGroup) {
-					settingsGroup = { sections: [{ settings: [] }], id: config.id || '', title: title || '', titleRange: nullRange, range: nullRange, extensionInfo: config.extensionInfo };
-					result.push(settingsGroup);
+
+			let settingsGroup: ISettingsGroup | undefined;
+
+			if (property.section.title) {
+				const groups = byTitle.get(property.section.title);
+				if (groups) {
+					const extensionId = property.section.extensionInfo?.id;
+					settingsGroup = groups.find(g => g.extensionInfo?.id === extensionId);
 				}
-			} else {
-				settingsGroup.sections[settingsGroup.sections.length - 1].title = title;
 			}
-		}
-		if (config.properties) {
+
+			if (!settingsGroup && property.section.id) {
+				const groups = byId.get(property.section.id);
+				if (groups) {
+					const extensionId = property.section.extensionInfo?.id;
+					settingsGroup = groups.find(g => g.extensionInfo?.id === extensionId && !g.title);
+				}
+				if (settingsGroup && !settingsGroup?.title && property.section.title) {
+					settingsGroup.title = property.section.title;
+					const byTitleGroups = byTitle.get(property.section.title);
+					if (byTitleGroups) {
+						byTitleGroups.push(settingsGroup);
+					} else {
+						byTitle.set(property.section.title, [settingsGroup]);
+					}
+				}
+			}
+
 			if (!settingsGroup) {
-				settingsGroup = { sections: [{ settings: [] }], id: config.id || '', title: config.id || '', titleRange: nullRange, range: nullRange, extensionInfo: config.extensionInfo };
+				settingsGroup = { sections: [{ title: property.section.title, settings: [] }], id: property.section.id || '', title: property.section.title ?? '', titleRange: nullRange, order: property.section.order, range: nullRange, extensionInfo: isString(property.source) ? undefined : property.source };
 				result.push(settingsGroup);
-			}
-			const configurationSettings: ISetting[] = [];
-			for (const setting of [...settingsGroup.sections[settingsGroup.sections.length - 1].settings, ...this.parseSettings(config.properties, config.extensionInfo)]) {
-				if (!seenSettings[setting.key]) {
-					configurationSettings.push(setting);
-					seenSettings[setting.key] = true;
+				if (property.section.title) {
+					const byTitleGroups = byTitle.get(property.section.title);
+					if (byTitleGroups) {
+						byTitleGroups.push(settingsGroup);
+					} else {
+						byTitle.set(property.section.title, [settingsGroup]);
+					}
+				}
+				if (property.section.id) {
+					const byIdGroups = byId.get(property.section.id);
+					if (byIdGroups) {
+						byIdGroups.push(settingsGroup);
+					} else {
+						byId.set(property.section.id, [settingsGroup]);
+					}
 				}
 			}
-			if (configurationSettings.length) {
-				settingsGroup.sections[settingsGroup.sections.length - 1].settings = configurationSettings;
+
+			const setting = this.parseSetting(key, property);
+			if (setting) {
+				settingsGroup.sections[0].settings.push(setting);
 			}
-		}
-		if (config.allOf) {
-			config.allOf.forEach(c => this.parseConfig(c, result, configurations, settingsGroup, seenSettings));
 		}
 		return result;
 	}
@@ -606,52 +668,102 @@ export class DefaultSettings extends Disposable {
 		return result;
 	}
 
-	private parseSettings(settingsObject: { [path: string]: IConfigurationPropertySchema; }, extensionInfo?: IConfigurationExtensionInfo): ISetting[] {
-		const result: ISetting[] = [];
-		for (const key in settingsObject) {
-			const prop = settingsObject[key];
-			if (this.matchesScope(prop)) {
-				const value = prop.default;
-				const description = (prop.description || prop.markdownDescription || '').split('\n');
-				const overrides = OVERRIDE_PROPERTY_PATTERN.test(key) ? this.parseOverrideSettings(prop.default) : [];
-				const listItemType = prop.type === 'array' && prop.items && !isArray(prop.items) && prop.items.type && !isArray(prop.items.type)
-					? prop.items.type
-					: undefined;
+	private parseSetting(key: string, prop: IRegisteredConfigurationPropertySchema): ISetting | undefined {
+		if (!this.matchesScope(prop)) {
+			return undefined;
+		}
 
-				const objectProperties = prop.type === 'object' ? prop.properties : undefined;
-				const objectPatternProperties = prop.type === 'object' ? prop.patternProperties : undefined;
-				const objectAdditionalProperties = prop.type === 'object' ? prop.additionalProperties : undefined;
-
-				result.push({
-					key,
-					value,
-					description,
-					descriptionIsMarkdown: !prop.description,
-					range: nullRange,
-					keyRange: nullRange,
-					valueRange: nullRange,
-					descriptionRanges: [],
-					overrides,
-					scope: prop.scope,
-					type: prop.type,
-					arrayItemType: listItemType,
-					objectProperties,
-					objectPatternProperties,
-					objectAdditionalProperties,
-					enum: prop.enum,
-					enumDescriptions: prop.enumDescriptions || prop.markdownEnumDescriptions,
-					enumDescriptionsAreMarkdown: !prop.enumDescriptions,
-					tags: prop.tags,
-					disallowSyncIgnore: prop.disallowSyncIgnore,
-					extensionInfo: extensionInfo,
-					deprecationMessage: prop.markdownDeprecationMessage || prop.deprecationMessage,
-					deprecationMessageIsMarkdown: !!prop.markdownDeprecationMessage,
-					validator: createValidator(prop),
-					enumItemLabels: prop.enumItemLabels
-				});
+		const value = prop.default;
+		let description = (prop.markdownDescription || prop.description || '');
+		if (typeof description !== 'string') {
+			description = '';
+		}
+		const descriptionLines = description.split('\n');
+		const overrides = OVERRIDE_PROPERTY_REGEX.test(key) ? this.parseOverrideSettings(prop.default) : [];
+		let listItemType: string | undefined;
+		if (prop.type === 'array' && prop.items && !Array.isArray(prop.items) && prop.items.type) {
+			if (prop.items.enum) {
+				listItemType = 'enum';
+			} else if (!Array.isArray(prop.items.type)) {
+				listItemType = prop.items.type;
 			}
 		}
-		return result;
+
+		const objectProperties = prop.type === 'object' ? prop.properties : undefined;
+		const objectPatternProperties = prop.type === 'object' ? prop.patternProperties : undefined;
+		const objectAdditionalProperties = prop.type === 'object' ? prop.additionalProperties : undefined;
+		const propertyNames = prop.type === 'object' ? prop.propertyNames : undefined;
+
+		let enumToUse = prop.enum;
+		let enumDescriptions = prop.markdownEnumDescriptions ?? prop.enumDescriptions;
+		let enumDescriptionsAreMarkdown = !!prop.markdownEnumDescriptions;
+		if (listItemType === 'enum' && !Array.isArray(prop.items)) {
+			enumToUse = prop.items!.enum;
+			enumDescriptions = prop.items!.markdownEnumDescriptions ?? prop.items!.enumDescriptions;
+			enumDescriptionsAreMarkdown = !!prop.items!.markdownEnumDescriptions;
+		}
+
+		let allKeysAreBoolean = false;
+		if (prop.type === 'object' && !prop.additionalProperties && prop.properties && Object.keys(prop.properties).length) {
+			allKeysAreBoolean = Object.keys(prop.properties).every(key => {
+				return prop.properties![key].type === 'boolean';
+			});
+		}
+
+		let isLanguageTagSetting = false;
+		if (OVERRIDE_PROPERTY_REGEX.test(key)) {
+			isLanguageTagSetting = true;
+		}
+
+		let defaultValueSource: ConfigurationDefaultValueSource | undefined;
+		if (!isLanguageTagSetting) {
+			const registeredConfigurationProp = prop as IRegisteredConfigurationPropertySchema;
+			if (registeredConfigurationProp && registeredConfigurationProp.defaultValueSource) {
+				defaultValueSource = registeredConfigurationProp.defaultValueSource;
+			}
+		}
+
+		if (!enumToUse && (prop.enumItemLabels || enumDescriptions || enumDescriptionsAreMarkdown)) {
+			console.error(`The setting ${key} has enum-related fields, but doesn't have an enum field. This setting may render improperly in the Settings editor.`);
+		}
+
+		return {
+			key,
+			value,
+			description: descriptionLines,
+			descriptionIsMarkdown: !!prop.markdownDescription,
+			keywords: prop.keywords,
+			range: nullRange,
+			keyRange: nullRange,
+			valueRange: nullRange,
+			descriptionRanges: [],
+			overrides,
+			scope: prop.scope,
+			type: prop.type,
+			arrayItemType: listItemType,
+			objectProperties,
+			objectPatternProperties,
+			objectAdditionalProperties,
+			propertyNames,
+			enum: enumToUse,
+			enumDescriptions: enumDescriptions,
+			enumDescriptionsAreMarkdown: enumDescriptionsAreMarkdown,
+			enumItemLabels: prop.enumItemLabels,
+			uniqueItems: prop.uniqueItems,
+			tags: prop.tags,
+			disallowSyncIgnore: prop.disallowSyncIgnore,
+			restricted: prop.restricted,
+			extensionInfo: isString(prop.source) ? undefined : prop.source,
+			deprecationMessage: prop.markdownDeprecationMessage || prop.deprecationMessage,
+			deprecationMessageIsMarkdown: !!prop.markdownDeprecationMessage,
+			validator: createValidator(prop),
+			allKeysAreBoolean,
+			editPresentation: prop.editPresentation,
+			order: prop.order,
+			nonLanguageSpecificDefaultValueSource: defaultValueSource,
+			isLanguageTagSetting,
+			categoryLabel: (isString(prop.source) ? undefined : prop.source?.id) === prop.section?.id ? prop.title : prop.section?.id
+		};
 	}
 
 	private parseOverrideSettings(overrideSettings: any): ISetting[] {
@@ -681,11 +793,11 @@ export class DefaultSettings extends Disposable {
 		return true;
 	}
 
-	private compareConfigurationNodes(c1: IConfigurationNode, c2: IConfigurationNode): number {
-		if (typeof c1.order !== 'number') {
+	private compareGroups(c1: ISettingsGroup, c2: ISettingsGroup): number {
+		if (typeof c1?.order !== 'number') {
 			return 1;
 		}
-		if (typeof c2.order !== 'number') {
+		if (typeof c2?.order !== 'number') {
 			return -1;
 		}
 		if (c1.order === c2.order) {
@@ -696,14 +808,11 @@ export class DefaultSettings extends Disposable {
 		return c1.order - c2.order;
 	}
 
-	private toContent(settingsGroups: ISettingsGroup[]): string {
+	private toContent(settingsGroups: ISettingsGroup[], startIndex: number): string {
 		const builder = new SettingsContentBuilder();
-		builder.pushLine('[');
-		settingsGroups.forEach((settingsGroup, i) => {
-			builder.pushGroup(settingsGroup);
-			builder.pushLine(',');
-		});
-		builder.pushLine(']');
+		for (let i = startIndex; i < settingsGroups.length; i++) {
+			builder.pushGroup(settingsGroups[i], i === startIndex, i === settingsGroups.length - 1);
+		}
 		return builder.getContent();
 	}
 
@@ -725,7 +834,7 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 
 		this._register(defaultSettings.onDidChange(() => this._onDidChangeGroups.fire()));
 		this._model = reference.object.textEditorModel!;
-		this._register(this.onDispose(() => reference.dispose()));
+		this._register(this.onWillDispose(() => reference.dispose()));
 	}
 
 	get uri(): URI {
@@ -740,7 +849,7 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 		return this.defaultSettings.getSettingsGroups();
 	}
 
-	protected get filterGroups(): ISettingsGroup[] {
+	protected override get filterGroups(): ISettingsGroup[] {
 		// Don't look at "commonly used" for filter
 		return this.settingsGroups.slice(1);
 	}
@@ -755,16 +864,16 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 			.sort((a, b) => a.order - b.order);
 		const nonEmptyResultGroups = resultGroups.filter(group => group.result.filterMatches.length);
 
-		const startLine = tail(this.settingsGroups).range.endLineNumber + 2;
+		const startLine = this.settingsGroups.at(-1)!.range.endLineNumber + 2;
 		const { settingsGroups: filteredGroups, matches } = this.writeResultGroups(nonEmptyResultGroups, startLine);
 
 		const metadata = this.collectMetadata(resultGroups);
 		return resultGroups.length ?
-			<IFilterResult>{
+			{
 				allGroups: this.settingsGroups,
 				filteredGroups,
 				matches,
-				metadata
+				metadata: metadata ?? undefined
 			} :
 			undefined;
 	}
@@ -772,35 +881,36 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 	/**
 	 * Translate the ISearchResultGroups to text, and write it to the editor model
 	 */
-	private writeResultGroups(groups: ISearchResultGroup[], startLine: number): { matches: IRange[], settingsGroups: ISettingsGroup[] } {
+	private writeResultGroups(groups: ISearchResultGroup[], startLine: number): { matches: IRange[]; settingsGroups: ISettingsGroup[] } {
 		const contentBuilderOffset = startLine - 1;
 		const builder = new SettingsContentBuilder(contentBuilderOffset);
 
 		const settingsGroups: ISettingsGroup[] = [];
 		const matches: IRange[] = [];
-		builder.pushLine(',');
-		groups.forEach(resultGroup => {
-			const settingsGroup = this.getGroup(resultGroup);
-			settingsGroups.push(settingsGroup);
-			matches.push(...this.writeSettingsGroupToBuilder(builder, settingsGroup, resultGroup.result.filterMatches));
-		});
+		if (groups.length) {
+			builder.pushLine(',');
+			groups.forEach(resultGroup => {
+				const settingsGroup = this.getGroup(resultGroup);
+				settingsGroups.push(settingsGroup);
+				matches.push(...this.writeSettingsGroupToBuilder(builder, settingsGroup, resultGroup.result.filterMatches));
+			});
+		}
 
 		// note: 1-indexed line numbers here
 		const groupContent = builder.getContent() + '\n';
 		const groupEndLine = this._model.getLineCount();
 		const cursorPosition = new Selection(startLine, 1, startLine, 1);
-		const edit: IIdentifiedSingleEditOperation = {
+		const edit: ISingleEditOperation = {
 			text: groupContent,
 			forceMoveMarkers: true,
-			range: new Range(startLine, 1, groupEndLine, 1),
-			identifier: { major: 1, minor: 0 }
+			range: new Range(startLine, 1, groupEndLine, 1)
 		};
 
 		this._model.pushEditOperations([cursorPosition], [edit], () => [cursorPosition]);
 
 		// Force tokenization now - otherwise it may be slightly delayed, causing a flash of white text
 		const tokenizeTo = Math.min(startLine + 60, this._model.getLineCount());
-		this._model.forceTokenization(tokenizeTo);
+		this._model.tokenization.forceTokenization(tokenizeTo);
 
 		return { matches, settingsGroups };
 	}
@@ -809,9 +919,11 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 		filterMatches = filterMatches
 			.map(filteredMatch => {
 				// Fix match ranges to offset from setting start line
-				return <ISettingMatch>{
+				return {
 					setting: filteredMatch.setting,
 					score: filteredMatch.score,
+					matchType: filteredMatch.matchType,
+					keyMatchScore: filteredMatch.keyMatchScore,
 					matches: filteredMatch.matches && filteredMatch.matches.map(match => {
 						return new Range(
 							match.startLineNumber - filteredMatch.setting.range.startLineNumber,
@@ -823,22 +935,20 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 			});
 
 		builder.pushGroup(settingsGroup);
-		builder.pushLine(',');
 
 		// builder has rewritten settings ranges, fix match ranges
-		const fixedMatches = flatten(
-			filterMatches
-				.map(m => m.matches || [])
-				.map((settingMatches, i) => {
-					const setting = settingsGroup.sections[0].settings[i];
-					return settingMatches.map(range => {
-						return new Range(
-							range.startLineNumber + setting.range.startLineNumber,
-							range.startColumn,
-							range.endLineNumber + setting.range.startLineNumber,
-							range.endColumn);
-					});
-				}));
+		const fixedMatches = filterMatches
+			.map(m => m.matches || [])
+			.flatMap((settingMatches, i) => {
+				const setting = settingsGroup.sections[0].settings[i];
+				return settingMatches.map(range => {
+					return new Range(
+						range.startLineNumber + setting.range.startLineNumber,
+						range.startColumn,
+						range.endLineNumber + setting.range.startLineNumber,
+						range.endColumn);
+				});
+			});
 
 		return fixedMatches;
 	}
@@ -864,11 +974,7 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 		};
 	}
 
-	findValueMatches(filter: string, setting: ISetting): IRange[] {
-		return [];
-	}
-
-	getPreference(key: string): ISetting | undefined {
+	override getPreference(key: string): ISetting | undefined {
 		for (const group of this.settingsGroups) {
 			for (const section of group.sections) {
 				for (const setting of section.settings) {
@@ -882,7 +988,7 @@ export class DefaultSettingsEditorModel extends AbstractSettingsModel implements
 	}
 
 	private getGroup(resultGroup: ISearchResultGroup): ISettingsGroup {
-		return <ISettingsGroup>{
+		return {
 			id: resultGroup.id,
 			range: nullRange,
 			title: resultGroup.label,
@@ -915,10 +1021,8 @@ class SettingsContentBuilder {
 		this._contentByLines.push(...lineText);
 	}
 
-	pushGroup(settingsGroups: ISettingsGroup): void {
-		this._contentByLines.push('{');
-		this._contentByLines.push('');
-		this._contentByLines.push('');
+	pushGroup(settingsGroups: ISettingsGroup, isFirst?: boolean, isLast?: boolean): void {
+		this._contentByLines.push(isFirst ? '[{' : '{');
 		const lastSetting = this._pushGroup(settingsGroups, '  ');
 
 		if (lastSetting) {
@@ -928,7 +1032,7 @@ class SettingsContentBuilder {
 			this._contentByLines[lineIdx - 2] = content.substring(0, content.length - 1);
 		}
 
-		this._contentByLines.push('}');
+		this._contentByLines.push(isLast ? '}]' : '},');
 	}
 
 	protected _pushGroup(group: ISettingsGroup, indent: string): ISetting | null {
@@ -936,9 +1040,7 @@ class SettingsContentBuilder {
 		const groupStart = this.lineCountWithOffset + 1;
 		for (const section of group.sections) {
 			if (section.title) {
-				const sectionTitleStart = this.lineCountWithOffset + 1;
 				this.addDescription([section.title], indent, this._contentByLines);
-				section.titleRange = { startLineNumber: sectionTitleStart, startColumn: 1, endLineNumber: this.lineCountWithOffset, endColumn: this.lastLine.length };
 			}
 
 			if (section.settings.length) {
@@ -978,25 +1080,26 @@ class SettingsContentBuilder {
 	}
 
 	private pushSettingDescription(setting: ISetting, indent: string): void {
-		const fixSettingLink = (line: string) => line.replace(/`#(.*)#`/g, (match, settingName) => `\`${settingName}\``);
-
 		setting.descriptionRanges = [];
 		const descriptionPreValue = indent + '// ';
-		for (let line of (setting.deprecationMessage ? [setting.deprecationMessage, ...setting.description] : setting.description)) {
-			line = fixSettingLink(line);
+		const deprecationMessageLines = setting.deprecationMessage?.split(/\n/g) ?? [];
+		for (let line of [...deprecationMessageLines, ...setting.description]) {
+			line = fixSettingLinks(line);
 
 			this._contentByLines.push(descriptionPreValue + line);
 			setting.descriptionRanges.push({ startLineNumber: this.lineCountWithOffset, startColumn: this.lastLine.indexOf(line) + 1, endLineNumber: this.lineCountWithOffset, endColumn: this.lastLine.length });
 		}
 
-		if (setting.enumDescriptions && setting.enumDescriptions.some(desc => !!desc)) {
+		if (setting.enum && setting.enumDescriptions?.some(desc => !!desc)) {
 			setting.enumDescriptions.forEach((desc, i) => {
 				const displayEnum = escapeInvisibleChars(String(setting.enum![i]));
 				const line = desc ?
-					`${displayEnum}: ${fixSettingLink(desc)}` :
+					`${displayEnum}: ${fixSettingLinks(desc)}` :
 					displayEnum;
 
-				this._contentByLines.push(`${indent}//  - ${line}`);
+				const lines = line.split(/\n/g);
+				lines[0] = ' - ' + lines[0];
+				this._contentByLines.push(...lines.map(l => `${indent}// ${l}`));
 
 				setting.descriptionRanges.push({ startLineNumber: this.lineCountWithOffset, startColumn: this.lastLine.indexOf(line) + 1, endLineNumber: this.lineCountWithOffset, endColumn: this.lastLine.length });
 			});
@@ -1041,7 +1144,7 @@ class RawSettingsContentBuilder extends SettingsContentBuilder {
 		super(0);
 	}
 
-	pushGroup(settingsGroups: ISettingsGroup): void {
+	override pushGroup(settingsGroups: ISettingsGroup): void {
 		this._pushGroup(settingsGroups, this.indent);
 	}
 
@@ -1051,9 +1154,15 @@ export class DefaultRawSettingsEditorModel extends Disposable {
 
 	private _content: string | null = null;
 
+	private readonly _onDidContentChanged = this._register(new Emitter<void>());
+	readonly onDidContentChanged = this._onDidContentChanged.event;
+
 	constructor(private defaultSettings: DefaultSettings) {
 		super();
-		this._register(defaultSettings.onDidChange(() => this._content = null));
+		this._register(defaultSettings.onDidChange(() => {
+			this._content = null;
+			this._onDidContentChanged.fire();
+		}));
 	}
 
 	get content(): string {

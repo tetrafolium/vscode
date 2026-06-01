@@ -3,40 +3,53 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { clamp } from 'vs/base/common/numbers';
-import { createStyleSheet } from 'vs/base/browser/dom';
-import { setGlobalSashSize } from 'vs/base/browser/ui/sash/sash';
-import { Event } from 'vs/base/common/event';
-import { Disposable, toDisposable } from 'vs/base/common/lifecycle';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
+import { clamp } from '../../../../base/common/numbers.js';
+import { setGlobalSashSize, setGlobalHoverDelay } from '../../../../base/browser/ui/sash/sash.js';
+import { Event } from '../../../../base/common/event.js';
+import { Disposable } from '../../../../base/common/lifecycle.js';
+import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { IWorkbenchContribution } from '../../../common/contributions.js';
+import { createStyleSheet } from '../../../../base/browser/domStylesheets.js';
 
-export const minSize = 4;
+export const minSize = 1;
 export const maxSize = 20; // see also https://ux.stackexchange.com/questions/39023/what-is-the-optimum-button-size-of-touch-screen-applications
 
-export class SashSizeController extends Disposable implements IWorkbenchContribution {
-	private readonly configurationName = 'workbench.sash.size';
-	private stylesheet: HTMLStyleElement;
+export class SashSettingsController extends Disposable implements IWorkbenchContribution {
+
+	static readonly ID = 'workbench.contrib.sash';
+
+	private readonly styleSheet = createStyleSheet();
 
 	constructor(
-		@IConfigurationService private readonly configurationService: IConfigurationService
+		@IConfigurationService private readonly configurationService: IConfigurationService,
 	) {
 		super();
 
-		this.stylesheet = createStyleSheet();
-		this._register(toDisposable(() => this.stylesheet.remove()));
+		const onDidChangeSize = Event.filter(configurationService.onDidChangeConfiguration, e => e.affectsConfiguration('workbench.sash.size'));
+		onDidChangeSize(this.onDidChangeSize, this, this._store);
+		this.onDidChangeSize();
 
-		const onDidChangeSizeConfiguration = Event.filter(configurationService.onDidChangeConfiguration, e => e.affectsConfiguration(this.configurationName));
-		this._register(onDidChangeSizeConfiguration(this.onDidChangeSizeConfiguration, this));
-		this.onDidChangeSizeConfiguration();
+		const onDidChangeHoverDelay = Event.filter(configurationService.onDidChangeConfiguration, e => e.affectsConfiguration('workbench.sash.hoverDelay'));
+		onDidChangeHoverDelay(this.onDidChangeHoverDelay, this, this._store);
+		this.onDidChangeHoverDelay();
 	}
 
-	private onDidChangeSizeConfiguration(): void {
-		const size = clamp(this.configurationService.getValue<number>(this.configurationName) ?? minSize, minSize, maxSize);
+	private onDidChangeSize(): void {
+		const configuredSize = this.configurationService.getValue<number>('workbench.sash.size');
+		const size = clamp(configuredSize, 4, 20);
+		const hoverSize = clamp(configuredSize, 1, 8);
 
-		document.documentElement.style.setProperty('--sash-size', size + 'px');
+		this.styleSheet.textContent = `
+			.monaco-workbench {
+				--vscode-sash-size: ${size}px;
+				--vscode-sash-hover-size: ${hoverSize}px;
+			}
+		`;
 
-		// Update behavor
 		setGlobalSashSize(size);
+	}
+
+	private onDidChangeHoverDelay(): void {
+		setGlobalHoverDelay(this.configurationService.getValue<number>('workbench.sash.hoverDelay'));
 	}
 }

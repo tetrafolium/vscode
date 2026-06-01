@@ -3,24 +3,70 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from 'vs/nls';
-import { ISetting } from 'vs/workbench/services/preferences/common/preferences';
+import { isWeb, isWindows } from '../../../../base/common/platform.js';
+import { localize } from '../../../../nls.js';
+import { ISetting, ISettingsGroup } from '../../../services/preferences/common/preferences.js';
 
-export interface ITOCEntry {
-	id: string;
-	label: string;
-
-	children?: ITOCEntry[];
-	settings?: Array<string | ISetting>;
+export interface ITOCFilter {
+	include?: {
+		keyPatterns?: string[];
+		tags?: string[];
+	};
+	exclude?: {
+		keyPatterns?: string[];
+		tags?: string[];
+	};
 }
 
-export const commonlyUsedData: ITOCEntry = {
-	id: 'commonlyUsed',
-	label: localize('commonlyUsed', "Commonly Used"),
-	settings: ['files.autoSave', 'editor.fontSize', 'editor.fontFamily', 'editor.tabSize', 'editor.renderWhitespace', 'editor.cursorStyle', 'editor.multiCursorModifier', 'editor.insertSpaces', 'editor.wordWrap', 'files.exclude', 'files.associations', 'workbench.editor.enablePreview']
-};
+export interface ITOCEntry<T> {
+	id: string;
+	label: string;
+	order?: number;
+	children?: ITOCEntry<T>[];
+	settings?: Array<T>;
+	hide?: boolean;
+}
 
-export const tocData: ITOCEntry = {
+const COMMONLY_USED_SETTINGS: readonly string[] = [
+	'editor.fontSize',
+	'editor.formatOnSave',
+	'files.autoSave',
+	'GitHub.copilot-chat.manageExtension',
+	'editor.defaultFormatter',
+	'editor.fontFamily',
+	'editor.wordWrap',
+	'chat.agent.maxRequests',
+	'files.exclude',
+	'workbench.colorTheme',
+	'editor.tabSize',
+	'editor.mouseWheelZoom',
+	'editor.formatOnPaste'
+];
+
+export function getCommonlyUsedData(settingGroups: ISettingsGroup[]): ITOCEntry<ISetting> {
+	const allSettings = new Map<string, ISetting>();
+	for (const group of settingGroups) {
+		for (const section of group.sections) {
+			for (const s of section.settings) {
+				allSettings.set(s.key, s);
+			}
+		}
+	}
+	const settings: ISetting[] = [];
+	for (const id of COMMONLY_USED_SETTINGS) {
+		const setting = allSettings.get(id);
+		if (setting) {
+			settings.push(setting);
+		}
+	}
+	return {
+		id: 'commonlyUsed',
+		label: localize('commonlyUsed', "Commonly Used"),
+		settings
+	};
+}
+
+export const tocData: ITOCEntry<string> = {
 	id: 'root',
 	label: 'root',
 	children: [
@@ -53,6 +99,11 @@ export const tocData: ITOCEntry = {
 					id: 'editor/diffEditor',
 					label: localize('diffEditor', "Diff Editor"),
 					settings: ['diffEditor.*']
+				},
+				{
+					id: 'editor/multiDiffEditor',
+					label: localize('multiDiffEditor', "Multi-File Diff Editor"),
+					settings: ['multiDiffEditor.*']
 				},
 				{
 					id: 'editor/minimap',
@@ -105,6 +156,11 @@ export const tocData: ITOCEntry = {
 					id: 'workbench/screencastmode',
 					label: localize('screencastMode', "Screencast Mode"),
 					settings: ['screencastMode.*']
+				},
+				{
+					id: 'workbench/browser',
+					label: localize('browser', "Browser"),
+					settings: ['workbench.browser.*']
 				}
 			]
 		},
@@ -121,9 +177,128 @@ export const tocData: ITOCEntry = {
 			]
 		},
 		{
+			id: 'chat',
+			label: localize('chat', "Chat"),
+			children: [
+				{
+					id: 'chat/agent',
+					label: localize('chatAgent', "Agent"),
+					settings: [
+						'chat.agent.*',
+						'chat.checkpoints.*',
+						'chat.editRequests',
+						'chat.requestQueuing.*',
+						'chat.undoRequests.*',
+						'chat.customAgentInSubagent.*',
+						'chat.editing.autoAcceptDelay',
+						'chat.editing.confirmEditRequest*',
+						'chat.planAgent.defaultModel'
+					]
+				},
+				{
+					id: 'chat/appearance',
+					label: localize('chatAppearance', "Appearance"),
+					settings: [
+						'chat.editor.*',
+						'chat.fontFamily',
+						'chat.fontSize',
+						'chat.math.*',
+						'chat.agentsControl.*',
+						'chat.alternativeToolAction.*',
+						'chat.codeBlock.*',
+						'chat.editing.explainChanges.enabled',
+						'chat.editMode.hidden',
+						'chat.editorAssociations',
+						'chat.extensionUnification.*',
+						'chat.inlineReferences.*',
+						'chat.notifyWindow*',
+						'chat.statusWidget.*',
+						'chat.tips.*',
+						'chat.unifiedAgentsBar.*',
+						'accessibility.signals.chatUserActionRequired',
+						'accessibility.signals.chatResponseReceived'
+					]
+				},
+				{
+					id: 'chat/sessions',
+					label: localize('chatSessions', "Sessions"),
+					settings: [
+						'chat.agentSessionProjection.*',
+						'chat.sessions.*',
+						'chat.viewProgressBadge.*',
+						'chat.viewSessions.*',
+						'chat.restoreLastPanelSession',
+						'chat.exitAfterDelegation',
+						'chat.repoInfo.*'
+					]
+				},
+				{
+					id: 'chat/tools',
+					label: localize('chatTools', "Tools"),
+					settings: [
+						'chat.tools.*',
+						'chat.extensionTools.*'
+					]
+				},
+				{
+					id: 'chat/mcp',
+					label: localize('chatMcp', "MCP"),
+					settings: ['mcp', 'chat.mcp.*', 'mcp.*']
+				},
+				{
+					id: 'chat/context',
+					label: localize('chatContext', "Context"),
+					settings: [
+						'chat.detectParticipant.*',
+						'chat.experimental.detectParticipant.*',
+						'chat.implicitContext.*',
+						'chat.promptFilesLocations',
+						'chat.instructionsFilesLocations',
+						'chat.modeFilesLocations',
+						'chat.agentFilesLocations',
+						'chat.agentSkillsLocations',
+						'chat.hookFilesLocations',
+						'chat.promptFilesRecommendations',
+						'chat.useAgentsMdFile',
+						'chat.useNestedAgentsMdFiles',
+						'chat.useAgentSkills',
+						'chat.experimental.useSkillAdherencePrompt',
+						'chat.useHooks',
+						'chat.includeApplyingInstructions',
+						'chat.includeReferencedInstructions',
+						'chat.sendElementsToChat.*',
+						'chat.useClaudeMdFile'
+					]
+				},
+				{
+					id: 'chat/inlineChat',
+					label: localize('chatInlineChat', "Inline Chat"),
+					settings: ['inlineChat.*']
+				},
+				{
+					id: 'chat/miscellaneous',
+					label: localize('chatMiscellaneous', "Miscellaneous"),
+					settings: [
+						'chat.disableAIFeatures',
+						'chat.allowAnonymousAccess'
+					]
+				},
+			]
+		},
+		{
 			id: 'features',
 			label: localize('features', "Features"),
 			children: [
+				{
+					id: 'features/accessibilitySignals',
+					label: localize('accessibility.signals', 'Accessibility Signals'),
+					settings: ['accessibility.signal*']
+				},
+				{
+					id: 'features/accessibility',
+					label: localize('accessibility', "Accessibility"),
+					settings: ['accessibility.*']
+				},
 				{
 					id: 'features/explorer',
 					label: localize('fileExplorer', "Explorer"),
@@ -133,16 +308,20 @@ export const tocData: ITOCEntry = {
 					id: 'features/search',
 					label: localize('search', "Search"),
 					settings: ['search.*']
-				}
-				,
+				},
 				{
 					id: 'features/debug',
 					label: localize('debug', "Debug"),
 					settings: ['debug.*', 'launch']
 				},
 				{
+					id: 'features/testing',
+					label: localize('testing', "Testing"),
+					settings: ['testing.*']
+				},
+				{
 					id: 'features/scm',
-					label: localize('scm', "SCM"),
+					label: localize('scm', "Source Control"),
 					settings: ['scm.*']
 				},
 				{
@@ -188,7 +367,18 @@ export const tocData: ITOCEntry = {
 				{
 					id: 'features/notebook',
 					label: localize('notebook', 'Notebook'),
-					settings: ['notebook.*']
+					settings: ['notebook.*', 'interactiveWindow.*']
+				},
+				{
+					id: 'features/mergeEditor',
+					label: localize('mergeEditor', 'Merge Editor'),
+					settings: ['mergeEditor.*']
+				},
+				{
+					id: 'features/issueReporter',
+					label: localize('issueReporter', 'Issue Reporter'),
+					settings: ['issueReporter.*'],
+					hide: !isWeb
 				}
 			]
 		},
@@ -219,30 +409,37 @@ export const tocData: ITOCEntry = {
 				{
 					id: 'application/settingsSync',
 					label: localize('settingsSync', "Settings Sync"),
-					settings: ['settingsSync.*', 'sync.*']
+					settings: ['settingsSync.*']
+				},
+				{
+					id: 'application/network',
+					label: localize('network', "Network"),
+					settings: ['network.*']
+				},
+				{
+					id: 'application/experimental',
+					label: localize('experimental', "Experimental"),
+					settings: ['application.experimental.*']
+				},
+				{
+					id: 'application/other',
+					label: localize('other', "Other"),
+					settings: ['application.*'],
+					hide: isWindows
+				}
+			]
+		},
+		{
+			id: 'security',
+			label: localize('security', "Security"),
+			settings: ['security.*'],
+			children: [
+				{
+					id: 'security/workspace',
+					label: localize('workspace', "Workspace"),
+					settings: ['security.workspace.*']
 				}
 			]
 		}
 	]
 };
-
-export const knownAcronyms = new Set<string>();
-[
-	'css',
-	'html',
-	'scss',
-	'less',
-	'json',
-	'js',
-	'ts',
-	'ie',
-	'id',
-	'php',
-	'scm',
-].forEach(str => knownAcronyms.add(str));
-
-export const knownTermMappings = new Map<string, string>();
-knownTermMappings.set('power shell', 'PowerShell');
-knownTermMappings.set('powershell', 'PowerShell');
-knownTermMappings.set('javascript', 'JavaScript');
-knownTermMappings.set('typescript', 'TypeScript');

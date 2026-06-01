@@ -3,45 +3,43 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IUserDataSyncLogService } from 'vs/platform/userDataSync/common/userDataSync';
-import { AbstractLogService, ILoggerService, ILogger } from 'vs/platform/log/common/log';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
+import { joinPath } from '../../../base/common/resources.js';
+import { localize } from '../../../nls.js';
+import { IEnvironmentService } from '../../environment/common/environment.js';
+import { AbstractLogger, ILogger, ILoggerService } from '../../log/common/log.js';
+import { IUserDataSyncLogService, USER_DATA_SYNC_LOG_ID } from './userDataSync.js';
 
-export class UserDataSyncLogService extends AbstractLogService implements IUserDataSyncLogService {
+export class UserDataSyncLogService extends AbstractLogger implements IUserDataSyncLogService {
 
 	declare readonly _serviceBrand: undefined;
 	private readonly logger: ILogger;
 
 	constructor(
 		@ILoggerService loggerService: ILoggerService,
-		@IEnvironmentService environmentService: IEnvironmentService
+		@IEnvironmentService environmentService: IEnvironmentService,
 	) {
 		super();
-		this.logger = this._register(loggerService.getLogger(environmentService.userDataSyncLogResource));
+		this.logger = this._register(loggerService.createLogger(joinPath(environmentService.logsHome, `${USER_DATA_SYNC_LOG_ID}.log`), { id: USER_DATA_SYNC_LOG_ID, name: localize('userDataSyncLog', "Settings Sync") }));
 	}
 
-	trace(message: string, ...args: any[]): void {
+	trace(message: string, ...args: unknown[]): void {
 		this.logger.trace(message, ...args);
 	}
 
-	debug(message: string, ...args: any[]): void {
+	debug(message: string, ...args: unknown[]): void {
 		this.logger.debug(message, ...args);
 	}
 
-	info(message: string, ...args: any[]): void {
+	info(message: string, ...args: unknown[]): void {
 		this.logger.info(message, ...args);
 	}
 
-	warn(message: string, ...args: any[]): void {
+	warn(message: string, ...args: unknown[]): void {
 		this.logger.warn(message, ...args);
 	}
 
-	error(message: string | Error, ...args: any[]): void {
+	error(message: string | Error, ...args: unknown[]): void {
 		this.logger.error(message, ...args);
-	}
-
-	critical(message: string | Error, ...args: any[]): void {
-		this.logger.critical(message, ...args);
 	}
 
 	flush(): void {

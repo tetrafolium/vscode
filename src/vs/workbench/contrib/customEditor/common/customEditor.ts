@@ -3,27 +3,31 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { distinct, mergeSort } from 'vs/base/common/arrays';
-import { Event } from 'vs/base/common/event';
-import * as glob from 'vs/base/common/glob';
-import { IDisposable, IReference } from 'vs/base/common/lifecycle';
-import { Schemas } from 'vs/base/common/network';
-import { posix } from 'vs/base/common/path';
-import { basename } from 'vs/base/common/resources';
-import { URI } from 'vs/base/common/uri';
-import { RawContextKey } from 'vs/platform/contextkey/common/contextkey';
-import { ITextEditorOptions } from 'vs/platform/editor/common/editor';
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import { GroupIdentifier, IEditorInput, IEditorPane, IRevertOptions, ISaveOptions } from 'vs/workbench/common/editor';
-import { IEditorGroup } from 'vs/workbench/services/editor/common/editorGroupsService';
+import { distinct } from '../../../../base/common/arrays.js';
+import { Event } from '../../../../base/common/event.js';
+import { IMarkdownString } from '../../../../base/common/htmlContent.js';
+import { IDisposable, IReference } from '../../../../base/common/lifecycle.js';
+import { URI } from '../../../../base/common/uri.js';
+import * as nls from '../../../../nls.js';
+import { RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
+import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { IRevertOptions, ISaveOptions } from '../../../common/editor.js';
+import { globMatchesResource, priorityToRank, RegisteredEditorPriority, RegisteredEditorPriorityInfo } from '../../../services/editor/common/editorResolverService.js';
 
 export const ICustomEditorService = createDecorator<ICustomEditorService>('customEditorService');
 
-export const CONTEXT_CUSTOM_EDITORS = new RawContextKey<string>('customEditors', '');
+export const CONTEXT_ACTIVE_CUSTOM_EDITOR_ID = new RawContextKey<string>('activeCustomEditorId', '', {
+	type: 'string',
+	description: nls.localize('context.customEditor', "The viewType of the currently active custom editor."),
+});
+
 export const CONTEXT_FOCUSED_CUSTOM_EDITOR_IS_EDITABLE = new RawContextKey<boolean>('focusedCustomEditorIsEditable', false);
 
 export interface CustomEditorCapabilities {
 	readonly supportsMultipleEditorsPerDocument?: boolean;
+	readonly isTextEditor?: boolean;
+	readonly supportsInlineDiff?: boolean;
+	readonly supportsSideBySideDiff?: boolean;
 }
 
 export interface ICustomEditorService {
@@ -36,15 +40,13 @@ export interface ICustomEditorService {
 	getContributedCustomEditors(resource: URI): CustomEditorInfoCollection;
 	getUserConfiguredCustomEditors(resource: URI): CustomEditorInfoCollection;
 
-	createInput(resource: URI, viewType: string, group: GroupIdentifier | undefined, options?: { readonly customClasses: string }): IEditorInput;
-
-	openWith(resource: URI, customEditorViewType: string, options?: ITextEditorOptions, group?: IEditorGroup): Promise<IEditorPane | undefined>;
-	promptOpenWith(resource: URI, options?: ITextEditorOptions, group?: IEditorGroup): Promise<IEditorPane | undefined>;
-
 	registerCustomEditorCapabilities(viewType: string, options: CustomEditorCapabilities): IDisposable;
+	getCustomEditorCapabilities(viewType: string): CustomEditorCapabilities | undefined;
 }
 
 export interface ICustomEditorModelManager {
+	getAllModels(resource: URI): Promise<ICustomEditorModel[]>;
+
 	get(resource: URI, viewType: string): Promise<ICustomEditorModel | undefined>;
 
 	tryRetain(resource: URI, viewType: string): Promise<IReference<ICustomEditorModel>> | undefined;
@@ -58,8 +60,13 @@ export interface ICustomEditorModel extends IDisposable {
 	readonly viewType: string;
 	readonly resource: URI;
 	readonly backupId: string | undefined;
+	readonly canHotExit: boolean;
 
-	isReadonly(): boolean;
+	isReadonly(): boolean | IMarkdownString;
+	readonly onDidChangeReadonly: Event<void>;
+
+	isOrphaned(): boolean;
+	readonly onDidChangeOrphaned: Event<void>;
 
 	isDirty(): boolean;
 	readonly onDidChangeDirty: Event<void>;
@@ -76,29 +83,31 @@ export const enum CustomEditorPriority {
 	option = 'option',
 }
 
+export const enum CustomEditorDiffEditorLayout {
+	Inline = 'inline',
+	SideBySide = 'sideBySide',
+}
+
 export interface CustomEditorSelector {
 	readonly filenamePattern?: string;
 }
+
+export type CustomEditorPriorityInfo = RegisteredEditorPriorityInfo;
 
 export interface CustomEditorDescriptor {
 	readonly id: string;
 	readonly displayName: string;
 	readonly providerDisplayName: string;
-	readonly priority: CustomEditorPriority;
+	readonly priority: CustomEditorPriorityInfo;
 	readonly selector: readonly CustomEditorSelector[];
 }
 
 export class CustomEditorInfo implements CustomEditorDescriptor {
 
-	private static readonly excludedSchemes = new Set([
-		Schemas.extension,
-		Schemas.webviewPanel,
-	]);
-
 	public readonly id: string;
 	public readonly displayName: string;
 	public readonly providerDisplayName: string;
-	public readonly priority: CustomEditorPriority;
+	public readonly priority: CustomEditorPriorityInfo;
 	public readonly selector: readonly CustomEditorSelector[];
 
 	constructor(descriptor: CustomEditorDescriptor) {
@@ -110,22 +119,7 @@ export class CustomEditorInfo implements CustomEditorDescriptor {
 	}
 
 	matches(resource: URI): boolean {
-		return this.selector.some(selector => CustomEditorInfo.selectorMatches(selector, resource));
-	}
-
-	static selectorMatches(selector: CustomEditorSelector, resource: URI): boolean {
-		if (CustomEditorInfo.excludedSchemes.has(resource.scheme)) {
-			return false;
-		}
-
-		if (selector.filenamePattern) {
-			const matchOnPath = selector.filenamePattern.indexOf(posix.sep) >= 0;
-			const target = matchOnPath ? resource.path : basename(resource);
-			if (glob.match(selector.filenamePattern.toLowerCase(), target.toLowerCase())) {
-				return true;
-			}
-		}
-		return false;
+		return this.selector.some(selector => selector.filenamePattern && globMatchesResource(selector.filenamePattern, resource));
 	}
 }
 
@@ -147,9 +141,9 @@ export class CustomEditorInfoCollection {
 	 */
 	public get defaultEditor(): CustomEditorInfo | undefined {
 		return this.allEditors.find(editor => {
-			switch (editor.priority) {
-				case CustomEditorPriority.default:
-				case CustomEditorPriority.builtin:
+			switch (editor.priority.editor) {
+				case RegisteredEditorPriority.default:
+				case RegisteredEditorPriority.builtin:
 					// A default editor must have higher priority than all other contributed editors.
 					return this.allEditors.every(otherEditor =>
 						otherEditor === editor || isLowerPriority(otherEditor, editor));
@@ -167,21 +161,13 @@ export class CustomEditorInfoCollection {
 	 * the same priority.
 	 */
 	public get bestAvailableEditor(): CustomEditorInfo | undefined {
-		const editors = mergeSort(Array.from(this.allEditors), (a, b) => {
-			return priorityToRank(a.priority) - priorityToRank(b.priority);
+		const editors = Array.from(this.allEditors).sort((a, b) => {
+			return priorityToRank(a.priority.editor) - priorityToRank(b.priority.editor);
 		});
 		return editors[0];
 	}
 }
 
 function isLowerPriority(otherEditor: CustomEditorInfo, editor: CustomEditorInfo): unknown {
-	return priorityToRank(otherEditor.priority) < priorityToRank(editor.priority);
-}
-
-function priorityToRank(priority: CustomEditorPriority): number {
-	switch (priority) {
-		case CustomEditorPriority.default: return 3;
-		case CustomEditorPriority.builtin: return 2;
-		case CustomEditorPriority.option: return 1;
-	}
+	return priorityToRank(otherEditor.priority.editor) < priorityToRank(editor.priority.editor);
 }

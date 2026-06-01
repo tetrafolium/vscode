@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ScrollbarVisibility } from 'vs/base/common/scrollable';
+import { ScrollbarVisibility } from '../../../common/scrollable.js';
 
 export interface ScrollableElementCreationOptions {
 	/**
@@ -31,6 +31,10 @@ export interface ScrollableElementCreationOptions {
 	 */
 	mouseWheelSmoothScroll?: boolean;
 	/**
+	 * Make scrolling inertial - mostly useful with touchpad on linux.
+	 */
+	inertialScroll?: boolean;
+	/**
 	 * Flip axes. Treat vertical scrolling like horizontal and vice-versa.
 	 * Defaults to false.
 	 */
@@ -40,6 +44,11 @@ export interface ScrollableElementCreationOptions {
 	 * Defaults to false.
 	 */
 	scrollYToX?: boolean;
+	/**
+	 * Consume all mouse wheel events if a scrollbar is needed (i.e. scrollSize > size).
+	 * Defaults to false.
+	 */
+	consumeMouseWheelIfScrollbarIsNeeded?: boolean;
 	/**
 	 * Always consume mouse wheel events, even when scrolling is no longer possible.
 	 * Defaults to false.
@@ -126,7 +135,11 @@ export interface ScrollableElementChangeOptions {
 	mouseWheelScrollSensitivity?: number;
 	fastScrollSensitivity?: number;
 	scrollPredominantAxis?: boolean;
+	horizontal?: ScrollbarVisibility;
 	horizontalScrollbarSize?: number;
+	vertical?: ScrollbarVisibility;
+	verticalScrollbarSize?: number;
+	scrollByPage?: boolean;
 }
 
 export interface ScrollableElementResolvedOptions {
@@ -136,11 +149,13 @@ export interface ScrollableElementResolvedOptions {
 	handleMouseWheel: boolean;
 	flipAxes: boolean;
 	scrollYToX: boolean;
+	consumeMouseWheelIfScrollbarIsNeeded: boolean;
 	alwaysConsumeMouseWheel: boolean;
 	mouseWheelScrollSensitivity: number;
 	fastScrollSensitivity: number;
 	scrollPredominantAxis: boolean;
 	mouseWheelSmoothScroll: boolean;
+	inertialScroll: boolean;
 	arrowSize: number;
 	listenOnDomNode: HTMLElement | null;
 	horizontal: ScrollbarVisibility;

@@ -3,37 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { localize } from 'vs/nls';
-import { IKeyMods, IQuickInputService } from 'vs/platform/quickinput/common/quickInput';
-import { IEditor } from 'vs/editor/common/editorCommon';
-import { IEditorService, SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
-import { IRange } from 'vs/editor/common/core/range';
-import { AbstractGotoLineQuickAccessProvider } from 'vs/editor/contrib/quickAccess/gotoLineQuickAccess';
-import { Registry } from 'vs/platform/registry/common/platform';
-import { IQuickAccessRegistry, Extensions as QuickaccesExtensions } from 'vs/platform/quickinput/common/quickAccess';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { IWorkbenchEditorConfiguration } from 'vs/workbench/common/editor';
-import { Action2, registerAction2 } from 'vs/platform/actions/common/actions';
-import { KeyMod, KeyCode } from 'vs/base/common/keyCodes';
-import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
+import { Event } from '../../../../../base/common/event.js';
+import { localize, localize2 } from '../../../../../nls.js';
+import { IKeyMods, IQuickInputService } from '../../../../../platform/quickinput/common/quickInput.js';
+import { IEditorService, SIDE_GROUP } from '../../../../services/editor/common/editorService.js';
+import { IRange } from '../../../../../editor/common/core/range.js';
+import { AbstractGotoLineQuickAccessProvider } from '../../../../../editor/contrib/quickAccess/browser/gotoLineQuickAccess.js';
+import { Registry } from '../../../../../platform/registry/common/platform.js';
+import { IQuickAccessRegistry, Extensions as QuickAccessExtensions } from '../../../../../platform/quickinput/common/quickAccess.js';
+import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
+import { IWorkbenchEditorConfiguration } from '../../../../common/editor.js';
+import { Action2, registerAction2 } from '../../../../../platform/actions/common/actions.js';
+import { KeyMod, KeyCode } from '../../../../../base/common/keyCodes.js';
+import { ServicesAccessor } from '../../../../../platform/instantiation/common/instantiation.js';
+import { KeybindingWeight } from '../../../../../platform/keybinding/common/keybindingsRegistry.js';
+import { IQuickAccessTextEditorContext } from '../../../../../editor/contrib/quickAccess/browser/editorNavigationQuickAccess.js';
+import { ITextEditorOptions } from '../../../../../platform/editor/common/editor.js';
+import { IStorageService } from '../../../../../platform/storage/common/storage.js';
 
 export class GotoLineQuickAccessProvider extends AbstractGotoLineQuickAccessProvider {
 
-	protected readonly onDidActiveTextEditorControlChange = this.editorService.onDidActiveEditorChange;
+	protected readonly onDidActiveTextEditorControlChange: Event<void>;
 
 	constructor(
 		@IEditorService private readonly editorService: IEditorService,
-		@IConfigurationService private readonly configurationService: IConfigurationService
+		@IConfigurationService private readonly configurationService: IConfigurationService,
+		@IStorageService protected override readonly storageService: IStorageService
 	) {
 		super();
+		this.onDidActiveTextEditorControlChange = this.editorService.onDidActiveEditorChange;
 	}
 
 	private get configuration() {
-		const editorConfig = this.configurationService.getValue<IWorkbenchEditorConfiguration>().workbench.editor;
+		const editorConfig = this.configurationService.getValue<IWorkbenchEditorConfiguration>().workbench?.editor;
 
 		return {
-			openEditorPinned: !editorConfig.enablePreviewFromQuickOpen,
+			openEditorPinned: !editorConfig?.enablePreviewFromQuickOpen || !editorConfig?.enablePreview
 		};
 	}
 
@@ -41,50 +46,82 @@ export class GotoLineQuickAccessProvider extends AbstractGotoLineQuickAccessProv
 		return this.editorService.activeTextEditorControl;
 	}
 
-	protected gotoLocation(editor: IEditor, options: { range: IRange, keyMods: IKeyMods, forceSideBySide?: boolean, preserveFocus?: boolean }): void {
+	protected override gotoLocation(context: IQuickAccessTextEditorContext, options: { range: IRange; keyMods: IKeyMods; forceSideBySide?: boolean; preserveFocus?: boolean }): void {
 
 		// Check for sideBySide use
-		if ((options.keyMods.ctrlCmd || options.forceSideBySide) && this.editorService.activeEditor) {
-			this.editorService.openEditor(this.editorService.activeEditor, {
+		if ((options.keyMods.alt || (this.configuration.openEditorPinned && options.keyMods.ctrlCmd) || options.forceSideBySide) && this.editorService.activeEditor) {
+			context.restoreViewState?.(); // since we open to the side, restore view state in this editor
+
+			const editorOptions: ITextEditorOptions = {
 				selection: options.range,
-				pinned: options.keyMods.alt || this.configuration.openEditorPinned,
+				pinned: options.keyMods.ctrlCmd || this.configuration.openEditorPinned,
 				preserveFocus: options.preserveFocus
-			}, SIDE_GROUP);
+			};
+
+			this.editorService.openEditor(this.editorService.activeEditor, editorOptions, SIDE_GROUP);
 		}
 
 		// Otherwise let parent handle it
 		else {
-			super.gotoLocation(editor, options);
+			super.gotoLocation(context, options);
 		}
 	}
 }
 
-Registry.as<IQuickAccessRegistry>(QuickaccesExtensions.Quickaccess).registerQuickAccessProvider({
-	ctor: GotoLineQuickAccessProvider,
-	prefix: AbstractGotoLineQuickAccessProvider.PREFIX,
-	placeholder: localize('gotoLineQuickAccessPlaceholder', "Type the line number and optional column to go to (e.g. 42:5 for line 42 and column 5)."),
-	helpEntries: [{ description: localize('gotoLineQuickAccess', "Go to Line/Column"), needsEditor: true }]
-});
-
 class GotoLineAction extends Action2 {
+
+	static readonly ID = 'workbench.action.gotoLine';
 
 	constructor() {
 		super({
-			id: 'workbench.action.gotoLine',
-			title: { value: localize('gotoLine', "Go to Line/Column..."), original: 'Go to Line/Column...' },
+			id: GotoLineAction.ID,
+			title: localize2('gotoLine', 'Go to Line/Column...'),
 			f1: true,
 			keybinding: {
 				weight: KeybindingWeight.WorkbenchContrib,
 				when: null,
-				primary: KeyMod.CtrlCmd | KeyCode.KEY_G,
-				mac: { primary: KeyMod.WinCtrl | KeyCode.KEY_G }
+				primary: KeyMod.CtrlCmd | KeyCode.KeyG,
+				mac: { primary: KeyMod.WinCtrl | KeyCode.KeyG }
 			}
 		});
 	}
 
 	async run(accessor: ServicesAccessor): Promise<void> {
-		accessor.get(IQuickInputService).quickAccess.show(GotoLineQuickAccessProvider.PREFIX);
+		accessor.get(IQuickInputService).quickAccess.show(GotoLineQuickAccessProvider.GO_TO_LINE_PREFIX);
 	}
 }
 
 registerAction2(GotoLineAction);
+
+Registry.as<IQuickAccessRegistry>(QuickAccessExtensions.Quickaccess).registerQuickAccessProvider({
+	ctor: GotoLineQuickAccessProvider,
+	prefix: AbstractGotoLineQuickAccessProvider.GO_TO_LINE_PREFIX,
+	placeholder: localize('gotoLineQuickAccessPlaceholder', "Type the line number and optional column to go to (e.g. :42:5 for line 42, column 5). Type :: to go to a character offset (e.g. ::1024 for character 1024 from the start of the file). Use negative values to navigate backwards."),
+	helpEntries: [{ description: localize('gotoLineQuickAccess', "Go to Line/Column"), commandId: GotoLineAction.ID }]
+});
+
+class GotoOffsetAction extends Action2 {
+
+	static readonly ID = 'workbench.action.gotoOffset';
+
+	constructor() {
+		super({
+			id: GotoOffsetAction.ID,
+			title: localize2('gotoOffset', 'Go to Offset...'),
+			f1: true
+		});
+	}
+
+	async run(accessor: ServicesAccessor): Promise<void> {
+		accessor.get(IQuickInputService).quickAccess.show(GotoLineQuickAccessProvider.GO_TO_OFFSET_PREFIX);
+	}
+}
+
+registerAction2(GotoOffsetAction);
+
+Registry.as<IQuickAccessRegistry>(QuickAccessExtensions.Quickaccess).registerQuickAccessProvider({
+	ctor: GotoLineQuickAccessProvider,
+	prefix: GotoLineQuickAccessProvider.GO_TO_OFFSET_PREFIX,
+	placeholder: localize('gotoLineQuickAccessPlaceholder', "Type the line number and optional column to go to (e.g. :42:5 for line 42, column 5). Type :: to go to a character offset (e.g. ::1024 for character 1024 from the start of the file). Use negative values to navigate backwards."),
+	helpEntries: [{ description: localize('gotoOffsetQuickAccess', "Go to Offset"), commandId: GotoOffsetAction.ID }]
+});

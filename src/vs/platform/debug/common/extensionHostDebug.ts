@@ -3,10 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import { Event } from 'vs/base/common/event';
-import { IRemoteConsoleLog } from 'vs/base/common/console';
-import { IProcessEnvironment } from 'vs/base/common/platform';
+import { Event } from '../../../base/common/event.js';
+import { createDecorator } from '../../instantiation/common/instantiation.js';
 
 export const IExtensionHostDebugService = createDecorator<IExtensionHostDebugService>('extensionHostDebugService');
 
@@ -14,11 +12,6 @@ export interface IAttachSessionEvent {
 	sessionId: string;
 	subId?: string;
 	port: number;
-}
-
-export interface ILogToSessionEvent {
-	sessionId: string;
-	log: IRemoteConsoleLog;
 }
 
 export interface ITerminateSessionEvent {
@@ -35,7 +28,9 @@ export interface ICloseSessionEvent {
 }
 
 export interface IOpenExtensionWindowResult {
-	rendererDebugPort?: number;
+	rendererDebugAddr?: string;
+	port?: number;
+	success: boolean;
 }
 
 export interface IExtensionHostDebugService {
@@ -50,11 +45,10 @@ export interface IExtensionHostDebugService {
 	attachSession(sessionId: string, port: number, subId?: string): void;
 	readonly onAttachSession: Event<IAttachSessionEvent>;
 
-	logToSession(sessionId: string, log: IRemoteConsoleLog): void;
-	readonly onLogToSession: Event<ILogToSessionEvent>;
-
 	terminateSession(sessionId: string, subId?: string): void;
 	readonly onTerminateSession: Event<ITerminateSessionEvent>;
 
-	openExtensionDevelopmentHostWindow(args: string[], env: IProcessEnvironment, debugRenderer: boolean): Promise<IOpenExtensionWindowResult>;
+	openExtensionDevelopmentHostWindow(args: string[], debugRenderer: boolean): Promise<IOpenExtensionWindowResult>;
+
+	attachToCurrentWindowRenderer(windowId: number): Promise<IOpenExtensionWindowResult>;
 }

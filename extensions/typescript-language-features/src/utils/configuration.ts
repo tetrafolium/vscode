@@ -3,211 +3,195 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as os from 'os';
-import * as path from 'path';
 import * as vscode from 'vscode';
-import * as objects from '../utils/objects';
+import { Disposable } from './dispose';
 
-export enum TsServerLogLevel {
-	Off,
-	Normal,
-	Terse,
-	Verbose,
+export type UnifiedConfigurationScope = vscode.ConfigurationScope | null | undefined;
+
+export const unifiedConfigSection = 'js/ts';
+
+export interface ReadUnifiedConfigOptions<Scope = UnifiedConfigurationScope> {
+	readonly scope?: Scope;
+	readonly fallbackSection: string;
+	readonly fallbackSubSectionNameOverride?: string;
 }
 
-export namespace TsServerLogLevel {
-	export function fromString(value: string): TsServerLogLevel {
-		switch (value && value.toLowerCase()) {
-			case 'normal':
-				return TsServerLogLevel.Normal;
-			case 'terse':
-				return TsServerLogLevel.Terse;
-			case 'verbose':
-				return TsServerLogLevel.Verbose;
-			case 'off':
-			default:
-				return TsServerLogLevel.Off;
-		}
+/**
+ * Gets a configuration value, checking the unified `js/ts` setting first,
+ * then falling back to the language-specific setting.
+ */
+export function readUnifiedConfig<T>(
+	subSectionName: string,
+	defaultValue: T,
+	options: ReadUnifiedConfigOptions
+): T {
+	// Check unified setting first
+	const unifiedConfig = vscode.workspace.getConfiguration(unifiedConfigSection, options.scope);
+	const unifiedInspect = unifiedConfig.inspect<T>(subSectionName);
+	if (hasModifiedValue(unifiedInspect)) {
+		return unifiedConfig.get<T>(subSectionName, defaultValue);
 	}
 
-	export function toString(value: TsServerLogLevel): string {
-		switch (value) {
-			case TsServerLogLevel.Normal:
-				return 'normal';
-			case TsServerLogLevel.Terse:
-				return 'terse';
-			case TsServerLogLevel.Verbose:
-				return 'verbose';
-			case TsServerLogLevel.Off:
-			default:
-				return 'off';
-		}
-	}
+	// Fall back to language-specific setting
+	const languageConfig = vscode.workspace.getConfiguration(options.fallbackSection, options.scope);
+	return languageConfig.get<T>(options.fallbackSubSectionNameOverride ?? subSectionName, defaultValue);
 }
 
-export const enum SeparateSyntaxServerConfiguration {
-	Disabled,
-	Enabled,
+/**
+ * Checks if an inspected configuration value has any user-defined values set.
+ */
+function hasModifiedValue(inspect: ReturnType<vscode.WorkspaceConfiguration['inspect']>): boolean {
+	if (!inspect) {
+		return false;
+	}
+
+	return (
+		typeof inspect.globalValue !== 'undefined'
+		|| typeof inspect.workspaceValue !== 'undefined'
+		|| typeof inspect.workspaceFolderValue !== 'undefined'
+		|| typeof inspect.globalLanguageValue !== 'undefined'
+		|| typeof inspect.workspaceLanguageValue !== 'undefined'
+		|| typeof inspect.workspaceFolderLanguageValue !== 'undefined'
+		|| ((inspect.languageIds?.length ?? 0) > 0)
+	);
 }
 
-export class ImplicitProjectConfiguration {
-
-	public readonly checkJs: boolean;
-	public readonly experimentalDecorators: boolean;
-	public readonly strictNullChecks: boolean;
-	public readonly strictFunctionTypes: boolean;
-
-	constructor(configuration: vscode.WorkspaceConfiguration) {
-		this.checkJs = ImplicitProjectConfiguration.readCheckJs(configuration);
-		this.experimentalDecorators = ImplicitProjectConfiguration.readExperimentalDecorators(configuration);
-		this.strictNullChecks = ImplicitProjectConfiguration.readImplicitStrictNullChecks(configuration);
-		this.strictFunctionTypes = ImplicitProjectConfiguration.readImplicitStrictFunctionTypes(configuration);
+/**
+ * Checks if a unified configuration value has been modified from its default value.
+ */
+export function hasModifiedUnifiedConfig(
+	subSectionName: string,
+	options: {
+		readonly scope?: UnifiedConfigurationScope;
+		readonly fallbackSection: string;
+	}
+): boolean {
+	// Check unified setting
+	const unifiedConfig = vscode.workspace.getConfiguration(unifiedConfigSection, options.scope);
+	if (hasModifiedValue(unifiedConfig.inspect(subSectionName))) {
+		return true;
 	}
 
-	public isEqualTo(other: ImplicitProjectConfiguration): boolean {
-		return objects.equals(this, other);
-	}
-
-	private static readCheckJs(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.checkJs')
-			?? configuration.get<boolean>('javascript.implicitProjectConfig.checkJs', false);
-	}
-
-	private static readExperimentalDecorators(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.experimentalDecorators')
-			?? configuration.get<boolean>('javascript.implicitProjectConfig.experimentalDecorators', false);
-	}
-
-	private static readImplicitStrictNullChecks(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.strictNullChecks', true);
-	}
-
-	private static readImplicitStrictFunctionTypes(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('js/ts.implicitProjectConfig.strictFunctionTypes', true);
-	}
+	// Check language-specific setting
+	const languageConfig = vscode.workspace.getConfiguration(options.fallbackSection, options.scope);
+	return hasModifiedValue(languageConfig.inspect(subSectionName));
 }
 
-export class TypeScriptServiceConfiguration {
-	public readonly locale: string | null;
-	public readonly globalTsdk: string | null;
-	public readonly localTsdk: string | null;
-	public readonly npmLocation: string | null;
-	public readonly tsServerLogLevel: TsServerLogLevel = TsServerLogLevel.Off;
-	public readonly tsServerPluginPaths: readonly string[];
-	public readonly implictProjectConfiguration: ImplicitProjectConfiguration;
-	public readonly disableAutomaticTypeAcquisition: boolean;
-	public readonly separateSyntaxServer: SeparateSyntaxServerConfiguration;
-	public readonly enableProjectDiagnostics: boolean;
-	public readonly maxTsServerMemory: number;
-	public readonly enablePromptUseWorkspaceTsdk: boolean;
-	public readonly watchOptions: protocol.WatchOptions | undefined;
-	public readonly includePackageJsonAutoImports: 'auto' | 'on' | 'off' | undefined;
+/**
+ * A cached, observable unified configuration value.
+ */
+export class UnifiedConfigValue<T> extends Disposable {
 
-	public static loadFromWorkspace(): TypeScriptServiceConfiguration {
-		return new TypeScriptServiceConfiguration();
-	}
+	private _value: T;
 
-	private constructor() {
-		const configuration = vscode.workspace.getConfiguration();
+	private readonly _onDidChange = this._register(new vscode.EventEmitter<T>());
+	public get onDidChange() { return this._onDidChange.event; }
 
-		this.locale = TypeScriptServiceConfiguration.extractLocale(configuration);
-		this.globalTsdk = TypeScriptServiceConfiguration.extractGlobalTsdk(configuration);
-		this.localTsdk = TypeScriptServiceConfiguration.extractLocalTsdk(configuration);
-		this.npmLocation = TypeScriptServiceConfiguration.readNpmLocation(configuration);
-		this.tsServerLogLevel = TypeScriptServiceConfiguration.readTsServerLogLevel(configuration);
-		this.tsServerPluginPaths = TypeScriptServiceConfiguration.readTsServerPluginPaths(configuration);
-		this.implictProjectConfiguration = new ImplicitProjectConfiguration(configuration);
-		this.disableAutomaticTypeAcquisition = TypeScriptServiceConfiguration.readDisableAutomaticTypeAcquisition(configuration);
-		this.separateSyntaxServer = TypeScriptServiceConfiguration.readUseSeparateSyntaxServer(configuration);
-		this.enableProjectDiagnostics = TypeScriptServiceConfiguration.readEnableProjectDiagnostics(configuration);
-		this.maxTsServerMemory = TypeScriptServiceConfiguration.readMaxTsServerMemory(configuration);
-		this.enablePromptUseWorkspaceTsdk = TypeScriptServiceConfiguration.readEnablePromptUseWorkspaceTsdk(configuration);
-		this.watchOptions = TypeScriptServiceConfiguration.readWatchOptions(configuration);
-		this.includePackageJsonAutoImports = TypeScriptServiceConfiguration.readIncludePackageJsonAutoImports(configuration);
-	}
+	constructor(
+		private readonly subSectionName: string,
+		private readonly defaultValue: T,
+		private readonly options: ReadUnifiedConfigOptions<{ languageId: string }>,
+	) {
+		super();
 
-	public isEqualTo(other: TypeScriptServiceConfiguration): boolean {
-		return objects.equals(this, other);
-	}
+		this._value = this.read();
 
-	private static fixPathPrefixes(inspectValue: string): string {
-		const pathPrefixes = ['~' + path.sep];
-		for (const pathPrefix of pathPrefixes) {
-			if (inspectValue.startsWith(pathPrefix)) {
-				return path.join(os.homedir(), inspectValue.slice(pathPrefix.length));
+		this._register(vscode.workspace.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration(`${unifiedConfigSection}.${subSectionName}`, options.scope ?? undefined) ||
+				e.affectsConfiguration(`${options.fallbackSection}.${options.fallbackSubSectionNameOverride ?? subSectionName}`, options.scope ?? undefined)
+			) {
+				const newValue = this.read();
+				if (newValue !== this._value) {
+					this._value = newValue;
+					this._onDidChange.fire(newValue);
+				}
 			}
+		}));
+	}
+
+	private read(): T {
+		return readUnifiedConfig<T>(this.subSectionName, this.defaultValue, this.options);
+	}
+
+	public getValue(): T {
+		return this._value;
+	}
+}
+
+export interface ResourceUnifiedConfigScope {
+	readonly uri: vscode.Uri;
+	readonly languageId: string;
+}
+
+/**
+ * A cached, observable unified configuration value that varies per workspace folder.
+ *
+ * Values are keyed by the workspace folder the resource belongs to, with a separate
+ * entry for resources outside any workspace folder.
+ */
+export class ResourceUnifiedConfigValue<T> extends Disposable {
+
+	private readonly _cache = new Map</* workspace folder */ string, T>();
+
+	private readonly _onDidChange = this._register(new vscode.EventEmitter<void>());
+	public readonly onDidChange = this._onDidChange.event;
+
+	constructor(
+		private readonly subSectionName: string,
+		private readonly defaultValue: T,
+		private readonly options?: {
+			readonly fallbackSubSectionNameOverride?: string;
+		},
+	) {
+		super();
+
+		const fallbackName = options?.fallbackSubSectionNameOverride ?? subSectionName;
+
+		this._register(vscode.workspace.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration(`${unifiedConfigSection}.${subSectionName}`) ||
+				e.affectsConfiguration(`javascript.${fallbackName}`) ||
+				e.affectsConfiguration(`typescript.${fallbackName}`)
+			) {
+				this._cache.clear();
+				this._onDidChange.fire();
+			}
+		}));
+
+		this._register(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+			this._cache.clear();
+			this._onDidChange.fire();
+		}));
+	}
+
+	public getValue(scope: ResourceUnifiedConfigScope): T {
+		const key = this.keyFor(scope);
+		const cached = this._cache.get(key);
+		if (cached !== undefined) {
+			return cached;
 		}
-		return inspectValue;
+
+		const fallbackSection = this.fallbackSectionFor(scope.languageId);
+		const value = readUnifiedConfig<T>(this.subSectionName, this.defaultValue, {
+			scope: { uri: scope.uri, languageId: scope.languageId },
+			fallbackSection,
+			fallbackSubSectionNameOverride: this.options?.fallbackSubSectionNameOverride,
+		});
+		this._cache.set(key, value);
+		return value;
 	}
 
-	private static extractGlobalTsdk(configuration: vscode.WorkspaceConfiguration): string | null {
-		const inspect = configuration.inspect('typescript.tsdk');
-		if (inspect && typeof inspect.globalValue === 'string') {
-			return this.fixPathPrefixes(inspect.globalValue);
+	private fallbackSectionFor(languageId: string): string {
+		switch (languageId) {
+			case 'javascript':
+			case 'javascriptreact':
+				return 'javascript';
+			default:
+				return 'typescript';
 		}
-		return null;
 	}
 
-	private static extractLocalTsdk(configuration: vscode.WorkspaceConfiguration): string | null {
-		const inspect = configuration.inspect('typescript.tsdk');
-		if (inspect && typeof inspect.workspaceValue === 'string') {
-			return this.fixPathPrefixes(inspect.workspaceValue);
-		}
-		return null;
-	}
-
-	private static readTsServerLogLevel(configuration: vscode.WorkspaceConfiguration): TsServerLogLevel {
-		const setting = configuration.get<string>('typescript.tsserver.log', 'off');
-		return TsServerLogLevel.fromString(setting);
-	}
-
-	private static readTsServerPluginPaths(configuration: vscode.WorkspaceConfiguration): string[] {
-		return configuration.get<string[]>('typescript.tsserver.pluginPaths', []);
-	}
-
-	private static readNpmLocation(configuration: vscode.WorkspaceConfiguration): string | null {
-		return configuration.get<string | null>('typescript.npm', null);
-	}
-
-	private static readDisableAutomaticTypeAcquisition(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('typescript.disableAutomaticTypeAcquisition', false);
-	}
-
-	private static extractLocale(configuration: vscode.WorkspaceConfiguration): string | null {
-		return configuration.get<string | null>('typescript.locale', null);
-	}
-
-	private static readUseSeparateSyntaxServer(configuration: vscode.WorkspaceConfiguration): SeparateSyntaxServerConfiguration {
-		const value = configuration.get('typescript.tsserver.useSeparateSyntaxServer', true);
-		if (value === true) {
-			return SeparateSyntaxServerConfiguration.Enabled;
-		}
-		return SeparateSyntaxServerConfiguration.Disabled;
-	}
-
-	private static readEnableProjectDiagnostics(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('typescript.tsserver.experimental.enableProjectDiagnostics', false);
-	}
-
-	private static readWatchOptions(configuration: vscode.WorkspaceConfiguration): protocol.WatchOptions | undefined {
-		return configuration.get<protocol.WatchOptions>('typescript.tsserver.watchOptions');
-	}
-
-	private static readIncludePackageJsonAutoImports(configuration: vscode.WorkspaceConfiguration): 'auto' | 'on' | 'off' | undefined {
-		return configuration.get<'auto' | 'on' | 'off'>('typescript.preferences.includePackageJsonAutoImports');
-	}
-
-	private static readMaxTsServerMemory(configuration: vscode.WorkspaceConfiguration): number {
-		const defaultMaxMemory = 3072;
-		const minimumMaxMemory = 128;
-		const memoryInMB = configuration.get<number>('typescript.tsserver.maxTsServerMemory', defaultMaxMemory);
-		if (!Number.isSafeInteger(memoryInMB)) {
-			return defaultMaxMemory;
-		}
-		return Math.max(memoryInMB, minimumMaxMemory);
-	}
-
-	private static readEnablePromptUseWorkspaceTsdk(configuration: vscode.WorkspaceConfiguration): boolean {
-		return configuration.get<boolean>('typescript.enablePromptUseWorkspaceTsdk', false);
+	private keyFor(scope: ResourceUnifiedConfigScope): string {
+		const folder = vscode.workspace.getWorkspaceFolder(scope.uri);
+		return folder ? folder.uri.toString() : '';
 	}
 }
